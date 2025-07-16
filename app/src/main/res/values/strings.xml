@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">DecideIT</string>
+    <string name="decideit">DecideIT</string>
+    <string name="student_voting_application">Student Voting Application</string>
+    <string name="logo">Logo</string>
+    <string name="enter_username">Enter username</string>
+    <string name="enter_password">Enter password</string>
+    <string name="login">LOGIN</string>
+    <string name="register">REGISTER</string>
+    <string name="if_you_do_have_an_account_please_register_here">If you do have an account, please register here</string>
+    <string name="if_you_do_not_have_an_account_please_n_register_here">If you do not have an account, please \n register here</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="enter_username1">Enter username</string>
+    <string name="enter_index_number">Enter index number</string>
+    <string name="enter_name">Enter name</string>
+    <string name="enter_password1">Enter password</string>
+    <string name="profile">PROFILE</string>
+    <string name="calendar">CALENDAR</string>
+    <string name="hello_user">Hello user:</string>
+    <string name="description">Description:</string>
+    <string name="date">Date:</string>
+    <string name="time_left_to_vote">Time left to vote:</string>
+    <string name="yes">YES</string>
+    <string name="no">NO</string>
+    <string name="abstain">ABSTAIN</string>
+    <string name="session_1">Session 1</string>
+    <string name="students">STUDENTS</string>
+    <string name="sessions">SESSIONS</string>
+    <string name="session_list_fragment">Session list fragment</string>
+    <string name="student_list_fragment">Student List Fragment</string>
+</resources>
