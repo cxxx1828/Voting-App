@@ -15,10 +15,10 @@ import androidx.core.view.WindowInsetsCompat;
 public class DecideActivity extends AppCompatActivity {
 
     ImageView im;
+    TextView t1, t2, t3, t4;
+    Button btn1, btn2, btn3;
 
-    TextView t1,t2,t3,t4;
-
-    Button btn1,btn2,btn3;
+    Button selected = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,7 +27,6 @@ public class DecideActivity extends AppCompatActivity {
         setContentView(R.layout.activity_decide);
 
         im = findViewById(R.id.Logo3);
-
         t1 = findViewById(R.id.tView);
         t2 = findViewById(R.id.tView1);
         t3 = findViewById(R.id.tView2);
@@ -48,12 +47,13 @@ public class DecideActivity extends AppCompatActivity {
         btn1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                btn1.setEnabled(false);
-                btn2.setEnabled(false);
-                btn3.setEnabled(false);
-
-                btn1.setBackgroundColor(getColor(R.color.red));
+                if (selected == null) {
+                    btn1.setBackgroundColor(getColor(R.color.red));
+                    selected = btn1;
+                } else if (selected == btn1) {
+                    btn1.setBackgroundColor(getColor(R.color.blue));
+                    selected = null;
+                }
 
             }
         });
@@ -61,26 +61,26 @@ public class DecideActivity extends AppCompatActivity {
         btn2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                btn1.setEnabled(false);
-                btn2.setEnabled(false);
-                btn3.setEnabled(false);
-
-                btn2.setBackgroundColor(getColor(R.color.red));
-
+                if (selected == null) {
+                    btn2.setBackgroundColor(getColor(R.color.red));
+                    selected = btn2;
+                } else if (selected == btn2) {
+                    btn2.setBackgroundColor(getColor(R.color.blue));
+                    selected = null;
+                }
             }
         });
 
         btn3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                btn1.setEnabled(false);
-                btn2.setEnabled(false);
-                btn3.setEnabled(false);
-
-                btn3.setBackgroundColor(getColor(R.color.red));
-
+                if (selected == null) {
+                    btn3.setBackgroundColor(getColor(R.color.red));
+                    selected = btn3;
+                } else if (selected == btn3) {
+                    btn3.setBackgroundColor(getColor(R.color.blue));
+                    selected = null;
+                }
             }
         });
 
