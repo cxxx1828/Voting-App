@@ -83,35 +83,39 @@ public class SessionListFragment extends Fragment {
         });
 
         // klik na SUBMIT
-        d.setOnClickListener(v -> {
-            if (selectedDateMillis == 0) {
-                selectedDateMillis = k.getDate(); // ako nije ništa menjano, uzmi trenutni
+        d.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (selectedDateMillis == 0) {
+                    selectedDateMillis = k.getDate(); // ako nije ništa menjano, uzmi trenutni
+                }
+
+                Date chosenDate = new Date(selectedDateMillis);
+                String dateStr = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(chosenDate);
+
+                // naziv sesije
+                String sessionName = "Session " + sessionCounter++;
+
+                // odredi atribut UPCOMING/PAST
+                String status;
+                Calendar today = Calendar.getInstance();
+                today.set(Calendar.HOUR_OF_DAY, 0);
+                today.set(Calendar.MINUTE, 0);
+                today.set(Calendar.SECOND, 0);
+                today.set(Calendar.MILLISECOND, 0);
+
+                if (selectedDateMillis >= today.getTimeInMillis()) {
+                    status = "UPCOMING";
+                } else {
+                    status = "PAST";
+                }
+
+                // napravi novi Session i dodaj ga u adapter
+                Session newSession = new Session(sessionName, dateStr, status);
+                adapter.addElement(newSession);
             }
-
-            Date chosenDate = new Date(selectedDateMillis);
-            String dateStr = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(chosenDate);
-
-            // naziv sesije
-            String sessionName = "Session " + sessionCounter++;
-
-            // odredi atribut UPCOMING/PAST
-            String status;
-            Calendar today = Calendar.getInstance();
-            today.set(Calendar.HOUR_OF_DAY, 0);
-            today.set(Calendar.MINUTE, 0);
-            today.set(Calendar.SECOND, 0);
-            today.set(Calendar.MILLISECOND, 0);
-
-            if (selectedDateMillis >= today.getTimeInMillis()) {
-                status = "UPCOMING";
-            } else {
-                status = "PAST";
-            }
-
-            // napravi novi Session i dodaj ga u adapter
-            Session newSession = new Session(sessionName, dateStr, status);
-            adapter.addElement(newSession);
         });
+
 
         // klik na item u listi -> ResultsActivity
         lista.setOnItemClickListener((AdapterView<?> parent, View itemView, int position, long id) -> {
