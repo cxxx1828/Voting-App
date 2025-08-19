@@ -6,9 +6,18 @@
     android:orientation="vertical"
     tools:context=".StudentListFragment">
 
-    <TextView
+    <ListView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/student_list_fragment" />
+        android:layout_height="wrap_content"
+        android:id="@+id/lista"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/emptyView"
+        android:layout_gravity="center"
+        android:text="@string/empty_list"
+        />
 
 </LinearLayout>

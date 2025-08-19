@@ -6,9 +6,43 @@
     android:orientation="vertical"
     tools:context=".SessionListFragment">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/session_list_fragment" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+
+        <CalendarView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="3"
+            android:id="@+id/kal"
+            />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/submit"
+            android:layout_weight="1"
+            android:id="@+id/butn"
+            />
+
+
+    </LinearLayout>
+
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/lista4"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/emptyView2"
+        android:layout_gravity="center"
+        android:text="@string/empty_list"
+        />
 
 </LinearLayout>

@@ -38,6 +38,11 @@ public class AdminAcitivty extends AppCompatActivity {
                 .add(R.id.fragment3, studentListFragment)
                 .commit();
 
+        b1.setEnabled(true);
+        b2.setEnabled(true);
+        b1.setBackgroundColor(getColor(R.color.purple));
+        b2.setBackgroundColor(getColor(R.color.purple));
+
         b2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

@@ -1,6 +1,7 @@
 package com.nina.dragicevic;
 
 import android.os.Bundle;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,6 +10,12 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 public class ResultsActivity extends AppCompatActivity {
+    TextView t1;
+    TextView t2;
+
+    TextView t3;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,5 +27,10 @@ public class ResultsActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        t1 = findViewById(R.id.tekst1);
+        t2 = findViewById(R.id.tekst2);
+        t3 = findViewById(R.id.tekst3);
+
     }
 }
