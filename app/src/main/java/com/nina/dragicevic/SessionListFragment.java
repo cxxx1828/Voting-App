@@ -75,11 +75,14 @@ public class SessionListFragment extends Fragment {
         lista.setAdapter(adapter);
         lista.setEmptyView(emptyView);
 
-        // prati selekciju datuma
-        k.setOnDateChangeListener((view1, year, month, dayOfMonth) -> {
-            Calendar c = Calendar.getInstance();
-            c.set(year, month, dayOfMonth, 0, 0, 0);
-            selectedDateMillis = c.getTimeInMillis();
+
+        k.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
+            @Override
+            public void onSelectedDayChange(CalendarView view1, int year, int month, int dayOfMonth) {
+                Calendar c = Calendar.getInstance();
+                c.set(year, month, dayOfMonth, 0, 0, 0);
+                selectedDateMillis = c.getTimeInMillis();
+            }
         });
 
         // klik na SUBMIT
@@ -118,16 +121,18 @@ public class SessionListFragment extends Fragment {
 
 
         // klik na item u listi -> ResultsActivity
-        lista.setOnItemClickListener((AdapterView<?> parent, View itemView, int position, long id) -> {
-            Session clicked = (Session) adapter.getItem(position);
+        lista.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View itemView, int position, long id) {
+                Session clicked = (Session) adapter.getItem(position);
 
-            Intent intent = new Intent(getActivity(), ResultsActivity.class);
-            intent.putExtra("sessionName", clicked.getNaziv());
-            intent.putExtra("sessionDate", clicked.getDatum());
-            intent.putExtra("sessionStatus", clicked.getAtribut());
-            startActivity(intent);
+                Intent intent = new Intent(getActivity(), ResultsActivity.class);
+                intent.putExtra("sessionName", clicked.getNaziv());
+                intent.putExtra("sessionDate", clicked.getDatum());
+                intent.putExtra("sessionStatus", clicked.getAtribut());
+                startActivity(intent);
+            }
         });
-        
 
         return view;
     }

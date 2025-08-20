@@ -72,13 +72,9 @@ public class SessionAdapter extends BaseAdapter {
             vh.datum.setText(s.getDatum());
             vh.atribut.setText(s.getAtribut());
 
-            // Dodavanje boje na osnovu statusa za lakše razlikovanje
             switch (s.getAtribut()) {
                 case "PAST":
                     vh.atribut.setTextColor(Color.RED);
-                    break;
-                case "PRESENT":
-                    vh.atribut.setTextColor(Color.GREEN);
                     break;
                 case "UPCOMING":
                     vh.atribut.setTextColor(Color.BLUE);

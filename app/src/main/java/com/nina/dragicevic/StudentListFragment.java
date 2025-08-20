@@ -89,28 +89,28 @@ public class StudentListFragment extends Fragment {
         studenti.add(new Student(R.drawable.female_student, "Milica Milić", "RA55/2021", false));
         studenti.add(new Student(R.drawable.male_student, "Petar Petrović", "RA101/2019", false));
         studenti.add(new Student(R.drawable.female_student, "Marija Marić", "RA202/2020", false));
-        studenti.add(new Student(R.drawable.male_student, "Nikola Nikolić", "RA303/2018", false));
-        studenti.add(new Student(R.drawable.female_student, "Jelena Jelić", "RA404/2021", false));
-        studenti.add(new Student(R.drawable.male_student, "Aleksandar Aleksić", "RA505/2022", false));
-        studenti.add(new Student(R.drawable.female_student, "Ivana Ivanović", "RA606/2020", false));
-        studenti.add(new Student(R.drawable.male_student, "Miloš Milošević", "RA707/2017", false));
-        studenti.add(new Student(R.drawable.female_student, "Sofija Sofić", "RA808/2019", false));
-        studenti.add(new Student(R.drawable.male_student, "Vuk Vukić", "RA909/2021", false));
+        studenti.add(new Student(R.drawable.male_student, "Nikola Nikolić", "RA33/2018", false));
+        studenti.add(new Student(R.drawable.female_student, "Jelena Jelić", "RA40/2021", false));
+        studenti.add(new Student(R.drawable.male_student, "Aleksandar Aleksić", "RA55/2022", false));
+        studenti.add(new Student(R.drawable.female_student, "Ivana Ivanović", "RA60/2020", false));
+        studenti.add(new Student(R.drawable.male_student, "Miloš Milošević", "RA77/2017", false));
+        studenti.add(new Student(R.drawable.female_student, "Sofija Sofić", "RA88/2019", false));
+        studenti.add(new Student(R.drawable.male_student, "Vuk Vukić", "RA99/2021", false));
         studenti.add(new Student(R.drawable.female_student, "Katarina Katić", "RA100/2022", false));
         studenti.add(new Student(R.drawable.male_student, "Luka Lukić", "RA111/2020", false));
         studenti.add(new Student(R.drawable.female_student, "Tamara Tomić", "RA222/2021", false));
-        studenti.add(new Student(R.drawable.male_student, "Stefan Stanković", "RA333/2019", false));
-        studenti.add(new Student(R.drawable.female_student, "Dragana Dragić", "RA444/2022", false));
-        studenti.add(new Student(R.drawable.male_student, "Marko Matić", "RA555/2018", false));
-        studenti.add(new Student(R.drawable.female_student, "Natalija Novaković", "RA666/2020", false));
-        studenti.add(new Student(R.drawable.male_student, "Filip Filipović", "RA777/2021", false));
-        studenti.add(new Student(R.drawable.female_student, "Jovana Jović", "RA888/2019", false));
-        studenti.add(new Student(R.drawable.male_student, "Nenad Nenadić", "RA999/2017", false));
+        studenti.add(new Student(R.drawable.male_student, "Stefan Stanković", "RA133/2019", false));
+        studenti.add(new Student(R.drawable.female_student, "Dragana Dragić", "RA144/2022", false));
+        studenti.add(new Student(R.drawable.male_student, "Marko Matić", "RA155/2018", false));
+        studenti.add(new Student(R.drawable.female_student, "Natalija Novaković", "RA61/2020", false));
+        studenti.add(new Student(R.drawable.male_student, "Filip Filipović", "RA7/2021", false));
+        studenti.add(new Student(R.drawable.female_student, "Jovana Jović", "RA18/2019", false));
+        studenti.add(new Student(R.drawable.male_student, "Nenad Nenadić", "RA59/2017", false));
         studenti.add(new Student(R.drawable.female_student, "Milena Milićević", "RA112/2022", false));
         studenti.add(new Student(R.drawable.male_student, "Bogdan Bogdanović", "RA223/2016", false));
-        studenti.add(new Student(R.drawable.female_student, "Teodora Tešić", "RA334/2020", false));
-        studenti.add(new Student(R.drawable.male_student, "Žarko Živković", "RA445/2019", false));
-        studenti.add(new Student(R.drawable.female_student, "Sara Sarić", "RA556/2021", false));
+        studenti.add(new Student(R.drawable.female_student, "Teodora Tešić", "RA54/2020", false));
+        studenti.add(new Student(R.drawable.male_student, "Žarko Živković", "RA45/2019", false));
+        studenti.add(new Student(R.drawable.female_student, "Sara Sarić", "RA56/2021", false));
 
 
 
