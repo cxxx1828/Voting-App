@@ -1,15 +1,40 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
+# Gradle
+.gradle/
+build/
+captures/
 .externalNativeBuild
 .cxx
+
+# Local configuration
 local.properties
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# JetBrains specific
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/misc.xml
+.idea/compiler.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/gradle.xml
+.idea/migrations.xml
+.idea/runConfigurations.xml
+.idea/vcs.xml
+.idea/.gitignore
+
+# macOS
+.DS_Store
+
+# Log / temporary files
+*.log
+*.tmp
+
+# Kotlin/Java
+*.class
+

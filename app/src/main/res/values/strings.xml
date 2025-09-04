@@ -35,4 +35,12 @@
     <string name="voted_abstain_x">VOTED ABSTAIN: X</string>
     <string name="voted_no_x">VOTED NO: X</string>
     <string name="voted_yes_x">VOTED YES: X</string>
+    <string name="delete_student">Delete student</string>
+    <string name="yes1">Yes</string>
+    <string name="deleted">" deleted"</string>
+    <string name="empty_list2">Empty List!</string>
+    <string name="no22">No</string>
+    <string name="are_you_sure_you_want_to_delete">"Are you sure you want to delete "</string>
+    <string name="question_mark">\?</string>
+
 </resources>

@@ -30,8 +30,8 @@ public class SessionListFragment extends Fragment {
     Button d;
 
 
-    private long selectedDateMillis = 0; // cuvamo izabrani datum
-    private int sessionCounter = 1; // brojac sesija
+    private long selectedDateMillis = 0;
+    private int sessionCounter = 1;
 
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
@@ -65,7 +65,7 @@ public class SessionListFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_session_list, container, false);
 
-        // Inicijalizacija
+
         lista = view.findViewById(R.id.lista4);
         emptyView = view.findViewById(R.id.emptyView2);
         k = view.findViewById(R.id.kal);
@@ -85,21 +85,19 @@ public class SessionListFragment extends Fragment {
             }
         });
 
-        // klik na SUBMIT
         d.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (selectedDateMillis == 0) {
-                    selectedDateMillis = k.getDate(); // ako nije ništa menjano, uzmi trenutni
+                    selectedDateMillis = k.getDate();
                 }
 
                 Date chosenDate = new Date(selectedDateMillis);
                 String dateStr = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(chosenDate);
 
-                // naziv sesije
+
                 String sessionName = "Session " + sessionCounter++;
 
-                // odredi atribut UPCOMING/PAST
                 String status;
                 Calendar today = Calendar.getInstance();
                 today.set(Calendar.HOUR_OF_DAY, 0);
@@ -113,14 +111,13 @@ public class SessionListFragment extends Fragment {
                     status = "PAST";
                 }
 
-                // napravi novi Session i dodaj ga u adapter
+
                 Session newSession = new Session(sessionName, dateStr, status);
                 adapter.addElement(newSession);
             }
         });
 
 
-        // klik na item u listi -> ResultsActivity
         lista.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View itemView, int position, long id) {

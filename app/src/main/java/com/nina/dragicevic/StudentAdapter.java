@@ -12,6 +12,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 
 import java.util.ArrayList;
 
@@ -87,19 +88,19 @@ public class StudentAdapter extends BaseAdapter {
             @Override
             public void onCheckedChanged(@NonNull CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    new androidx.appcompat.app.AlertDialog.Builder(mContext)
-                            .setTitle("Delete student")
-                            .setMessage("Are you sure you want to delete " + s.getImePrezime() + "  " + s.getIndex() + "?")
+                    new AlertDialog.Builder(mContext)
+                            .setTitle(R.string.delete_student)
+                            .setMessage(mContext.getString(R.string.are_you_sure_you_want_to_delete) + s.getImePrezime() + "  " + s.getIndex() + mContext.getString(R.string.question_mark))
                             .setCancelable(false)
-                            .setPositiveButton("Yes", (dialog, which) -> {
+                            .setPositiveButton(R.string.yes1, (dialog, which) -> {
                                 removeElement(s);
-                                Toast.makeText(mContext, s.getImePrezime() + " deleted", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(mContext, s.getImePrezime() + mContext.getString(R.string.deleted), Toast.LENGTH_SHORT).show();
                                 if (mList.isEmpty()) {
-                                    Toast.makeText(mContext, "Empty List!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(mContext, R.string.empty_list2, Toast.LENGTH_SHORT).show();
                                 }
                             })
-                            .setNegativeButton("No", (dialog, which) -> {
-                                // koristi parametar buttonView umesto vh
+                            .setNegativeButton(R.string.no22, (dialog, which) -> {
+                                
                                 buttonView.setOnCheckedChangeListener(null);
                                 buttonView.setChecked(false);
                                 buttonView.setOnCheckedChangeListener(this);
