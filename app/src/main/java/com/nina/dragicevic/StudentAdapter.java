@@ -12,18 +12,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 
 import java.util.ArrayList;
 
 public class StudentAdapter extends BaseAdapter {
 
     private Context mContext;
-
     private ArrayList<Student> mList;
+    private StudentListFragment fragment;
 
-    public StudentAdapter(Context mContext, ArrayList<Student> mList) {
+    public StudentAdapter(Context mContext, ArrayList<Student> mList, StudentListFragment fragment) {
         this.mContext = mContext;
         this.mList = mList;
+        this.fragment = fragment;
     }
 
     @Override
@@ -55,6 +57,21 @@ public class StudentAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
+    public void clear(){
+        mList.clear();
+        notifyDataSetChanged();
+    }
+
+    public void update(Student[] students) {
+        mList.clear();
+        if(students != null) {
+            for(Student student : students) {
+                mList.add(student);
+            }
+        }
+        notifyDataSetChanged();
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ViewHolder vh;
@@ -62,63 +79,64 @@ public class StudentAdapter extends BaseAdapter {
             LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             convertView = inflater.inflate(R.layout.row_layout, null);
             vh = new ViewHolder();
-            vh.ime_prezime = convertView.findViewById(R.id.ime_prezime);
+            vh.ime = convertView.findViewById(R.id.ime_prezime);
             vh.index = convertView.findViewById(R.id.indeks);
             vh.slika = convertView.findViewById(R.id.slika1);
             vh.checkBox = convertView.findViewById(R.id.check);
+            vh.prezime = convertView.findViewById(R.id.surname);
             convertView.setTag(vh);
         }
 
         vh = (ViewHolder) convertView.getTag();
-
         Student s = (Student) getItem(position);
 
-        vh.ime_prezime.setText(s.getImePrezime());
-        vh.slika.setImageResource(s.getSlikaResId());
-        vh.index.setText(s.getIndex());
+        if (s != null) {
+            vh.ime.setText(s.getIme());
+            vh.slika.setImageResource(s.getSlikaResId());
+            vh.index.setText(s.getIndex());
+            vh.prezime.setText(s.getPrezime());
 
+            vh.checkBox.setOnCheckedChangeListener(null);
+            vh.checkBox.setChecked(false);
 
-        vh.checkBox.setOnCheckedChangeListener(null); // reset listenera
-        vh.checkBox.setChecked(false);
-
-
-
-        vh.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(@NonNull CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    new androidx.appcompat.app.AlertDialog.Builder(mContext)
-                            .setTitle("Delete student")
-                            .setMessage("Are you sure you want to delete " + s.getImePrezime() + "  " + s.getIndex() + "?")
-                            .setCancelable(false)
-                            .setPositiveButton("Yes", (dialog, which) -> {
-                                removeElement(s);
-                                Toast.makeText(mContext, s.getImePrezime() + " deleted", Toast.LENGTH_SHORT).show();
-                                if (mList.isEmpty()) {
-                                    Toast.makeText(mContext, "Empty List!", Toast.LENGTH_SHORT).show();
-                                }
-                            })
-                            .setNegativeButton("No", (dialog, which) -> {
-                                // koristi parametar buttonView umesto vh
-                                buttonView.setOnCheckedChangeListener(null);
-                                buttonView.setChecked(false);
-                                buttonView.setOnCheckedChangeListener(this);
-                                dialog.dismiss();
-                            })
-                            .show();
+            vh.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(@NonNull CompoundButton buttonView, boolean isChecked) {
+                    if (isChecked) {
+                        new AlertDialog.Builder(mContext)
+                                .setTitle("Delete Student")
+                                .setMessage("Are you sure you want to delete " + s.getIme() + " " + s.getPrezime() + " (Index: " + s.getIndex() + ")?")
+                                .setCancelable(false)
+                                .setPositiveButton("Yes", (dialog, which) -> {
+//                                    if (fragment != null) {
+//                                        fragment.deleteStudent(s);
+//                                    }
+                                    removeElement(s);
+                                    Toast.makeText(mContext, s.getIme() + " " + s.getPrezime() + " deleted successfully", Toast.LENGTH_SHORT).show();
+                                    if (mList.isEmpty()) {
+                                        Toast.makeText(mContext, "Student list is now empty", Toast.LENGTH_SHORT).show();
+                                    }
+                                })
+                                .setNegativeButton("No", (dialog, which) -> {
+                                    buttonView.setOnCheckedChangeListener(null);
+                                    buttonView.setChecked(false);
+                                    buttonView.setOnCheckedChangeListener(this);
+                                    dialog.dismiss();
+                                })
+                                .show();
+                    }
                 }
-            }
-        });
-
+            });
+        }
 
         return convertView;
     }
 
     private class ViewHolder{
         ImageView slika;
-        TextView ime_prezime;
+        TextView ime;
+        TextView prezime;
         TextView index;
         CheckBox checkBox;
     }
-
 }

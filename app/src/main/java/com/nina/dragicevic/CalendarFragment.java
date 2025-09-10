@@ -6,13 +6,18 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CalendarView;
+import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -29,6 +34,7 @@ public class CalendarFragment extends Fragment {
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
+    private DecideItDbHelper dbHelper;
 
 
     public CalendarFragment() {
@@ -60,6 +66,7 @@ public class CalendarFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        dbHelper = new DecideItDbHelper(getContext(), "decideit.db", null, 1);
     }
 
     @Override
@@ -75,8 +82,32 @@ public class CalendarFragment extends Fragment {
         calendarView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
             public void onSelectedDayChange(@NonNull CalendarView view, int year, int month, int dayOfMonth) {
-                Intent intent = new Intent(getActivity(), DecideActivity.class);
-                startActivity(intent);
+                Log.d("CALENDAR_DEBUG", "Date selected -> " + dayOfMonth + "." + (month + 1) + "." + year);
+                Calendar c = Calendar.getInstance();
+                c.set(year, month, dayOfMonth);
+                String selectedDate = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(c.getTime());
+
+                Log.d("CALENDAR_DEBUG", "Formatted selectedDate: " + selectedDate);
+
+                // Check if session exists for this date
+                ArrayList<String> sessionDates = dbHelper.getSessionDates();
+                Log.d("CALENDAR_DEBUG", "Loaded " + sessionDates.size() + " session dates from DB");
+
+                if (sessionDates.contains(selectedDate)) {
+                    Log.d("CALENDAR_DEBUG", "Session found for date: " + selectedDate);
+                    Session session = dbHelper.getSessionByDate(selectedDate);
+
+                    Intent intent = new Intent(getActivity(), DecideActivity.class);
+                    intent.putExtra("sessionName", session.getNaziv());
+                    intent.putExtra("sessionDate", selectedDate);
+                    intent.putExtra("sessionDescription", "Session description");
+                    startActivity(intent);
+                    Log.d("CALENDAR_DEBUG", "DecideActivity started with sessionName: " +
+                            session.getNaziv() + ", sessionDate: " + selectedDate);
+                } else {
+                    Log.d("CALENDAR_DEBUG", "No session available for date: " + selectedDate);
+                    Toast.makeText(getContext(), "No session available for this date", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 

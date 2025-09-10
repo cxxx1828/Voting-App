@@ -2,11 +2,13 @@ package com.nina.dragicevic;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,6 +25,8 @@ public class LoginActivity extends AppCompatActivity {
 
     Button btn1,btn2;
     Bundle bundle;
+
+    DecideItDbHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,30 +50,68 @@ public class LoginActivity extends AppCompatActivity {
         btn1.setBackgroundColor(getColor(R.color.blue));
 
         bundle = new Bundle();
+        dbHelper = new DecideItDbHelper(this, "decideit.db", null, 1);
 
         btn1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.d("LOGIN_DEBUG", "Login button clicked");
+
                 String usernameText = username.getText().toString();
                 String passwordText = password.getText().toString();
+
+                Log.d("LOGIN_DEBUG", "Entered -> username: " + usernameText + ", password: " + passwordText);
 
                 bundle.putString("username", usernameText);
 
                 if(usernameText.isEmpty() || passwordText.isEmpty()) {
-
+                    Log.d("LOGIN_DEBUG", "Empty username or password");
+                    Toast.makeText(LoginActivity.this, "Please enter username and password", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                if((usernameText.equals("student") && passwordText.equals("student"))){
-                    Intent studentView = new Intent(LoginActivity.this, StudentViewActivity.class);
-                    studentView.putExtras(bundle);
-                    startActivity(studentView);
-                }
+//                if((usernameText.equals("student") && passwordText.equals("student"))){
+//                    Intent studentView = new Intent(LoginActivity.this, StudentViewActivity.class);
+//                    studentView.putExtras(bundle);
+//                    startActivity(studentView);
+//                }
+//
+//
+//                if((usernameText.equals("admin") && passwordText.equals("admin"))){
+//                    Intent adminActivity = new Intent(LoginActivity.this, AdminActivity.class);
+//                    startActivity(adminActivity);
+//                }
+                // preko baze podataka
+                String[] userInfo = dbHelper.authenticateUser(usernameText, passwordText);
+                Log.d("LOGIN_DEBUG", "authenticateUser returned: " + (userInfo != null ? "SUCCESS" : "FAILED"));
 
+                if (userInfo != null) {
+                    String name = userInfo[0];
+                    String surname = userInfo[1];
+                    String role = userInfo[2];
 
-                if((usernameText.equals("admin") && passwordText.equals("admin"))){
-                    Intent adminActivity = new Intent(LoginActivity.this, AdminAcitivty.class);
-                    startActivity(adminActivity);
+                    Log.d("LOGIN_DEBUG", "User authenticated -> name: " + name + ", surname: " + surname + ", role: " + role);
+
+                    bundle.putString("username", usernameText);
+                    bundle.putString("name", name);
+                    bundle.putString("surname", surname);
+
+                    if (role.equals("student")) {
+                        Log.d("LOGIN_DEBUG", "Redirecting to StudentViewActivity");
+                        Intent studentView = new Intent(LoginActivity.this, StudentViewActivity.class);
+                        studentView.putExtras(bundle);
+                        startActivity(studentView);
+                        finish();
+                    } else if (role.equals("admin") || role.equals("administrator")) {
+                        Log.d("LOGIN_DEBUG", "Redirecting to AdminActivity");
+                        Intent adminActivity = new Intent(LoginActivity.this, AdminActivity.class);
+                        adminActivity.putExtras(bundle);
+                        startActivity(adminActivity);
+                        finish();
+                    }
+                } else {
+                    Log.d("LOGIN_DEBUG", "Invalid credentials entered");
+                    Toast.makeText(LoginActivity.this, "Invalid username or password", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -78,6 +120,7 @@ public class LoginActivity extends AppCompatActivity {
         btn2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.d("LOGIN_DEBUG", "Register button clicked");
                 Intent registerActivity = new Intent(LoginActivity.this, RegisterActivity.class);
                 startActivity(registerActivity);
             }

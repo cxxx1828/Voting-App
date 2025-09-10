@@ -18,7 +18,7 @@ public class StudentViewActivity extends AppCompatActivity {
 
     ImageView logo;
 
-    String username1;
+    String username1, name, surname;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +34,10 @@ public class StudentViewActivity extends AppCompatActivity {
         b2.setBackgroundColor(getColor(R.color.blue));
 
         username1 = getIntent().getStringExtra("username");
+        name = getIntent().getStringExtra("name");
+        surname = getIntent().getStringExtra("surname");
+
+        String fullName = name + " " + surname;
 
         ProfileFragment profileFragment = ProfileFragment.newInstance(username1,"2");
 
@@ -45,7 +49,7 @@ public class StudentViewActivity extends AppCompatActivity {
         b1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ProfileFragment pFragment = ProfileFragment.newInstance(username1, "2");
+                ProfileFragment pFragment = ProfileFragment.newInstance(fullName, "2");
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.fragment1, pFragment)
                         .addToBackStack(null)

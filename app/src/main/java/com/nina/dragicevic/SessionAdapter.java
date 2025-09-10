@@ -51,6 +51,11 @@ public class SessionAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
+    public void clear(){
+        mList.clear();
+        notifyDataSetChanged();
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ViewHolder vh;

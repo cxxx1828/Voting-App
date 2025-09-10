@@ -5,6 +5,7 @@ import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,6 +30,7 @@ public class SessionListFragment extends Fragment {
     SessionAdapter adapter;
     CalendarView k;
     Button d;
+    DecideItDbHelper dbHelper;
 
 
     private long selectedDateMillis = 0; // cuvamo izabrani datum
@@ -35,6 +38,7 @@ public class SessionListFragment extends Fragment {
 
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    private static final String TAG = "SESSION_LIST_DEBUG";
 
     private String mParam1;
     private String mParam2;
@@ -71,9 +75,15 @@ public class SessionListFragment extends Fragment {
         k = view.findViewById(R.id.kal);
         d = view.findViewById(R.id.butn);
 
+        lista.setEmptyView(emptyView);
+        Log.d(TAG, "ListView and EmptyView initialized");
+
+        dbHelper = new DecideItDbHelper(getContext(), "decideit.db", null, 1);
         adapter = new SessionAdapter(getContext(), new ArrayList<>());
         lista.setAdapter(adapter);
-        lista.setEmptyView(emptyView);
+
+        Log.d(TAG, "Adapter set, calling refreshSessionList()");
+        refreshSessionList();
 
 
         k.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
@@ -82,6 +92,7 @@ public class SessionListFragment extends Fragment {
                 Calendar c = Calendar.getInstance();
                 c.set(year, month, dayOfMonth, 0, 0, 0);
                 selectedDateMillis = c.getTimeInMillis();
+                Log.d(TAG, "Date selected from CalendarView -> " + dayOfMonth + "." + (month + 1) + "." + year);
             }
         });
 
@@ -89,33 +100,30 @@ public class SessionListFragment extends Fragment {
         d.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.d(TAG, "Submit button clicked");
                 if (selectedDateMillis == 0) {
-                    selectedDateMillis = k.getDate(); // ako nije ništa menjano, uzmi trenutni
+                    Log.d(TAG, "No date manually selected, taking current CalendarView date");
+                    selectedDateMillis = k.getDate();
                 }
 
                 Date chosenDate = new Date(selectedDateMillis);
                 String dateStr = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(chosenDate);
-
-                // naziv sesije
                 String sessionName = "Session " + sessionCounter++;
+                Log.d(TAG, "Creating new session -> name: " + sessionName + ", date: " + dateStr);
 
-                // odredi atribut UPCOMING/PAST
-                String status;
-                Calendar today = Calendar.getInstance();
-                today.set(Calendar.HOUR_OF_DAY, 0);
-                today.set(Calendar.MINUTE, 0);
-                today.set(Calendar.SECOND, 0);
-                today.set(Calendar.MILLISECOND, 0);
+                // u dbhelper radim upcoming ili past
+                boolean success = dbHelper.insertSession(dateStr, sessionName, "");
 
-                if (selectedDateMillis >= today.getTimeInMillis()) {
-                    status = "UPCOMING";
+                if (success) {
+                    Log.d(TAG, "Session successfully inserted into DB");
+                    Toast.makeText(getContext(), "Session added successfully", Toast.LENGTH_SHORT).show();
+                    refreshSessionList();
                 } else {
-                    status = "PAST";
+                    Log.d(TAG, "Session insertion failed (duplicate date?)");
+                    Toast.makeText(getContext(), "Only one session per date allowed", Toast.LENGTH_SHORT).show();
                 }
 
-                // napravi novi Session i dodaj ga u adapter
-                Session newSession = new Session(sessionName, dateStr, status);
-                adapter.addElement(newSession);
+
             }
         });
 
@@ -126,6 +134,10 @@ public class SessionListFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View itemView, int position, long id) {
                 Session clicked = (Session) adapter.getItem(position);
 
+                Log.d(TAG, "List item clicked -> sessionName: " + clicked.getNaziv() +
+                        ", sessionDate: " + clicked.getDatum() +
+                        ", sessionStatus: " + clicked.getAtribut());
+
                 Intent intent = new Intent(getActivity(), ResultsActivity.class);
                 intent.putExtra("sessionName", clicked.getNaziv());
                 intent.putExtra("sessionDate", clicked.getDatum());
@@ -135,5 +147,26 @@ public class SessionListFragment extends Fragment {
         });
 
         return view;
+    }
+
+    private void refreshSessionList() {
+        Log.d(TAG, "refreshSessionList START");
+
+        Session[] sessions = dbHelper.readSessions();
+        adapter.clear();
+
+        if (sessions != null) {
+            Log.d(TAG, "Loaded " + sessions.length + " sessions from DB");
+            for (Session session : sessions) {
+                Log.d(TAG, "Adding session -> name: " + session.getNaziv() +
+                        ", date: " + session.getDatum() +
+                        ", status: " + session.getAtribut());
+                adapter.addElement(session);
+            }
+        } else {
+            Log.d(TAG, "No sessions found in DB (sessions == null)");
+        }
+
+        Log.d(TAG, "refreshSessionList END");
     }
 }

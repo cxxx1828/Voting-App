@@ -16,7 +16,7 @@
             android:name=".ResultsActivity"
             android:exported="false" />
         <activity
-            android:name=".AdminAcitivty"
+            android:name=".AdminActivity"
             android:exported="false" />
         <activity
             android:name=".DecideActivity"

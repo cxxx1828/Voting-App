@@ -35,4 +35,6 @@
     <string name="voted_abstain_x">VOTED ABSTAIN: X</string>
     <string name="voted_no_x">VOTED NO: X</string>
     <string name="voted_yes_x">VOTED YES: X</string>
+    <string name="enter_role">Enter role</string>
+    <string name="enter_surname">Enter surname</string>
 </resources>
