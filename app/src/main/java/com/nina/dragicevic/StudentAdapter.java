@@ -1,6 +1,7 @@
 package com.nina.dragicevic;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -108,10 +109,11 @@ public class StudentAdapter extends BaseAdapter {
                                 .setMessage("Are you sure you want to delete " + s.getIme() + " " + s.getPrezime() + " (Index: " + s.getIndex() + ")?")
                                 .setCancelable(false)
                                 .setPositiveButton("Yes", (dialog, which) -> {
-//                                    if (fragment != null) {
-//                                        fragment.deleteStudent(s);
-//                                    }
-                                    removeElement(s);
+                                    if (fragment != null) {
+                                        fragment.deleteStudent(s);
+                                        Toast.makeText(mContext, s.getIme() + " " + s.getPrezime() + " deleted successfully", Toast.LENGTH_SHORT).show();
+                                    }
+                                    Log.e("STUDENT_ADAPTER", "Fragment is null, cannot delete from database!");
                                     Toast.makeText(mContext, s.getIme() + " " + s.getPrezime() + " deleted successfully", Toast.LENGTH_SHORT).show();
                                     if (mList.isEmpty()) {
                                         Toast.makeText(mContext, "Student list is now empty", Toast.LENGTH_SHORT).show();
