@@ -69,7 +69,6 @@ public class SessionListFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_session_list, container, false);
 
-        // Inicijalizacija
         lista = view.findViewById(R.id.lista4);
         emptyView = view.findViewById(R.id.emptyView2);
         k = view.findViewById(R.id.kal);
@@ -96,7 +95,6 @@ public class SessionListFragment extends Fragment {
             }
         });
 
-        // klik na SUBMIT
         d.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -139,8 +137,8 @@ public class SessionListFragment extends Fragment {
                         ", sessionStatus: " + clicked.getAtribut());
 
                 Intent intent = new Intent(getActivity(), ResultsActivity.class);
-                intent.putExtra("sessionName", clicked.getNaziv());      // NAZIV (npr. "Session 2")
-                intent.putExtra("sessionDate", clicked.getDatum());      // DATUM (npr. "21.09.2025")
+                intent.putExtra("sessionName", clicked.getNaziv());
+                intent.putExtra("sessionDate", clicked.getDatum());
                 intent.putExtra("sessionStatus", clicked.getAtribut());
                 startActivity(intent);
             }

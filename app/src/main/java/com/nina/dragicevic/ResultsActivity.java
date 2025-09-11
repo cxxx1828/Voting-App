@@ -66,7 +66,6 @@ public class ResultsActivity extends AppCompatActivity {
         db.close();
 
         if (sessionName != null && sessionDate != null) {
-            // PAŽNJA: Zbog obrnutog redosleda u bazi, pokušavamo oba načina
 
             // Prvo pokušaj normalno
             int[] results = dbHelper.getVoteResults(sessionName, sessionDate);
@@ -103,12 +102,11 @@ public class ResultsActivity extends AppCompatActivity {
                 directDb.close();
             }
 
-            // Postavi rezultate na TextView-ove
+            // Postavi rezultate na tw-ove
             t1.setText("Voted Yes: " + results[0]);
             t2.setText("Voted No: " + results[1]);
             t3.setText("Voted Abstain: " + results[2]);
 
-            // Finalni log
             Log.d(TAG, "Final displayed results -> YES: " + results[0] + ", NO: " + results[1] + ", ABSTAIN: " + results[2]);
 
         } else {

@@ -70,17 +70,6 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
-//                if((usernameText.equals("student") && passwordText.equals("student"))){
-//                    Intent studentView = new Intent(LoginActivity.this, StudentViewActivity.class);
-//                    studentView.putExtras(bundle);
-//                    startActivity(studentView);
-//                }
-//
-//
-//                if((usernameText.equals("admin") && passwordText.equals("admin"))){
-//                    Intent adminActivity = new Intent(LoginActivity.this, AdminActivity.class);
-//                    startActivity(adminActivity);
-//                }
                 // preko baze podataka
                 String[] userInfo = dbHelper.authenticateUser(usernameText, passwordText);
                 Log.d("LOGIN_DEBUG", "authenticateUser returned: " + (userInfo != null ? "SUCCESS" : "FAILED"));

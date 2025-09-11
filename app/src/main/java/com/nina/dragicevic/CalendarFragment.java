@@ -89,7 +89,7 @@ public class CalendarFragment extends Fragment {
 
                 Log.d("CALENDAR_DEBUG", "Formatted selectedDate: " + selectedDate);
 
-                // Check if session exists for this date
+                //provera da li vec postoji sesija za datum
                 ArrayList<String> sessionDates = dbHelper.getSessionDates();
                 Log.d("CALENDAR_DEBUG", "Loaded " + sessionDates.size() + " session dates from DB");
 

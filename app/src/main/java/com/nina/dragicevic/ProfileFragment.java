@@ -64,7 +64,7 @@ public class ProfileFragment extends Fragment {
 
         TextView t1 = view.findViewById(R.id.textView1);
 
-        // mParam1 now contains the full name from database
+        // mParam1 sad ima iz baze celo ime
         t1.setText(getString(R.string.hello_user) + mParam1);
 
         return view;

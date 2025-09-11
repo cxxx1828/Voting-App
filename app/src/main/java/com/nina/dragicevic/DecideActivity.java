@@ -43,22 +43,21 @@ public class DecideActivity extends AppCompatActivity {
         btn2 = findViewById(R.id.b2);
         btn3 = findViewById(R.id.b3);
 
-        // Initialize database helper
         dbHelper = new DecideItDbHelper(this, "decideit.db", null, 1);
 
-        // Get session data from intent
+        // iz intenta ime i datum
         sessionName = getIntent().getStringExtra("sessionName");
         sessionDate = getIntent().getStringExtra("sessionDate");
 
         Log.d(TAG, "DecideActivity started with sessionName: " + sessionName + ", sessionDate: " + sessionDate);
 
-        // Get full session data from database
+        // celu sesiju iz db
         if (sessionDate != null) {
             currentSession = dbHelper.getSessionByDate(sessionDate);
             if (currentSession != null) {
                 Log.d(TAG, "Session loaded from DB: " + currentSession.getNaziv() + " Status: " + currentSession.getAtribut());
 
-                // Set session info from database
+                // setujem ime i datum sesije
                 t1.setText(currentSession.getNaziv());
                 t2.setText("Session description");
                 t3.setText(currentSession.getDatum());
@@ -79,7 +78,6 @@ public class DecideActivity extends AppCompatActivity {
         btn2.setBackgroundColor(getColor(R.color.blue));
         btn3.setBackgroundColor(getColor(R.color.blue));
 
-        // YES button onClick
         btn1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -101,7 +99,6 @@ public class DecideActivity extends AppCompatActivity {
             }
         });
 
-        // YES button onLongClick
         btn1.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
@@ -122,7 +119,6 @@ public class DecideActivity extends AppCompatActivity {
             }
         });
 
-        // NO button onClick
         btn2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -144,7 +140,6 @@ public class DecideActivity extends AppCompatActivity {
             }
         });
 
-        // NO button onLongClick
         btn2.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
@@ -165,7 +160,6 @@ public class DecideActivity extends AppCompatActivity {
             }
         });
 
-        // ABSTAIN button onClick
         btn3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -187,7 +181,6 @@ public class DecideActivity extends AppCompatActivity {
             }
         });
 
-        // ABSTAIN button onLongClick
         btn3.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {

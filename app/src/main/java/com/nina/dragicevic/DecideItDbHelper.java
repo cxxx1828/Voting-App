@@ -128,7 +128,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     }
 
 
-    //login autentifikacija korisnika, u LoginActivity
+    // autentifikacija korisnika, za LoginActivity
     public String[] authenticateUser(String username, String password) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -242,7 +242,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         return new Student(imageResId, name, surname, index, false, username);
     }
 
-    // SESSION OPERATIONS
 
     public boolean insertSession(String date, String sessionName, String description) {
         SQLiteDatabase db = null;
@@ -365,8 +364,8 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     }
 
     private Session createSessionFromCursor(Cursor cursor) {
-        String date = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATE));           // datum
-        String sessionName = cursor.getString(cursor.getColumnIndexOrThrow(COL_SESSION_NAME)); // naziv
+        String date = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATE));
+        String sessionName = cursor.getString(cursor.getColumnIndexOrThrow(COL_SESSION_NAME));
         String endTimeStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_END_TIME));
 
         long currentTime = System.currentTimeMillis();
@@ -379,7 +378,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         return new Session(date, sessionName, status);
     }
 
-    // VOTE OPERATIONS
     public boolean insertOrUpdateVote(String sessionName, String sessionDate, int voteType) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
