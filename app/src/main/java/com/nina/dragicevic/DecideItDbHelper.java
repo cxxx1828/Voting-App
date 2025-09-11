@@ -137,11 +137,13 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
             db = getReadableDatabase();
             String hashedPassword = hashPassword(password);
 
+            //cursor su svi elementi tabele, tabelica je kursor, ima svoje metode, znaci to malo cursor vraca tabelicu
             cursor = db.query(TABLE_USERS, null,
                     COL_USERNAME + " =? AND " + COL_PASSWORD + " =?",
                     new String[]{username, hashedPassword}, null, null, null);
 
             String[] userInfo = null;
+            //prebaci ga na prvog i to vrati
             if (cursor.moveToFirst()) {
                 userInfo = new String[3];
                 userInfo[0] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NAME));
@@ -189,8 +191,10 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         try {
             Log.d(TAG, "Reading all students");
             db = getReadableDatabase();
+            //new String[] {"student"} lista od jednog studenta instancirana
             cursor = db.query(TABLE_USERS, null, COL_ROLE + " =?", new String[]{"student"}, null, null, null);
 
+            //cursor.getCOunt broj elemenata u tabeli vraca, pa nam je to velicina novog niza
             if (cursor.getCount() <= 0) {
                 Log.d(TAG, "No students found");
                 return null;
@@ -234,6 +238,9 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         String surname = cursor.getString(cursor.getColumnIndexOrThrow(COL_SURNAME));
         String index = cursor.getString(cursor.getColumnIndexOrThrow(COL_INDEX));
         String username = cursor.getString(cursor.getColumnIndexOrThrow(COL_USERNAME));
+        //cursor omogucava getColumnIndex, koji dobavi indeks kolone a mi ga konvertujemo u string
+        //vraca index, getColumnIndexOrThrow wrapujemo sa getString da vrati string
+        //za svaki element vracamo na string jer nam je taj podatak u originalu string
 
         int imageResId = R.drawable.male_student;
 
