@@ -365,16 +365,18 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     }
 
     private Session createSessionFromCursor(Cursor cursor) {
-        String date = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATE));
-        String sessionName = cursor.getString(cursor.getColumnIndexOrThrow(COL_SESSION_NAME));
+        String date = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATE));           // datum
+        String sessionName = cursor.getString(cursor.getColumnIndexOrThrow(COL_SESSION_NAME)); // naziv
         String endTimeStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_END_TIME));
 
         long currentTime = System.currentTimeMillis();
         long endTime = Long.parseLong(endTimeStr);
         String status = (endTime > currentTime) ? "UPCOMING" : "PAST";
-        Log.d(TAG, "Creating session object: " + sessionName + " Status: " + status);
 
-        return new Session(sessionName, date, status);
+        Log.d(TAG, "Creating session object -> name: " + sessionName + ", date: " + date + ", status: " + status);
+
+        // PAZI REDOSLED
+        return new Session(date, sessionName, status);
     }
 
     // VOTE OPERATIONS

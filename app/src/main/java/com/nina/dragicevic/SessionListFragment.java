@@ -139,8 +139,8 @@ public class SessionListFragment extends Fragment {
                         ", sessionStatus: " + clicked.getAtribut());
 
                 Intent intent = new Intent(getActivity(), ResultsActivity.class);
-                intent.putExtra("sessionName", clicked.getNaziv());
-                intent.putExtra("sessionDate", clicked.getDatum());
+                intent.putExtra("sessionName", clicked.getNaziv());      // NAZIV (npr. "Session 2")
+                intent.putExtra("sessionDate", clicked.getDatum());      // DATUM (npr. "21.09.2025")
                 intent.putExtra("sessionStatus", clicked.getAtribut());
                 startActivity(intent);
             }
@@ -148,6 +148,8 @@ public class SessionListFragment extends Fragment {
 
         return view;
     }
+
+
 
     private void refreshSessionList() {
         Log.d(TAG, "refreshSessionList START");
