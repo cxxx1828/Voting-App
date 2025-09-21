@@ -2,6 +2,8 @@ package com.nina.dragicevic;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.fragment.app.Fragment;
 
@@ -21,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class SessionListFragment extends Fragment {
@@ -31,10 +35,11 @@ public class SessionListFragment extends Fragment {
     CalendarView k;
     Button d;
     DecideItDbHelper dbHelper;
+    ExecutorService executor;
+    Handler mainHandler;
 
-
-    private long selectedDateMillis = 0; // cuvamo izabrani datum
-    private int sessionCounter = 1; // brojac sesija
+    private long selectedDateMillis = 0;
+    private int sessionCounter = 1;
 
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
@@ -61,6 +66,9 @@ public class SessionListFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+
+        executor = Executors.newSingleThreadExecutor();
+        mainHandler = new Handler(Looper.getMainLooper());
     }
 
     @Override
@@ -77,13 +85,12 @@ public class SessionListFragment extends Fragment {
         lista.setEmptyView(emptyView);
         Log.d(TAG, "ListView and EmptyView initialized");
 
-        dbHelper = new DecideItDbHelper(getContext(), "decideit.db", null, 1);
+        dbHelper = new DecideItDbHelper(getContext(), "decideit_v2.db", null, 1);
         adapter = new SessionAdapter(getContext(), new ArrayList<>());
         lista.setAdapter(adapter);
 
-        Log.d(TAG, "Adapter set, calling refreshSessionList()");
-        refreshSessionList();
-
+        Log.d(TAG, "Adapter set, calling syncAndRefreshSessionList()");
+        syncAndRefreshSessionList();
 
         k.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
             @Override
@@ -109,22 +116,14 @@ public class SessionListFragment extends Fragment {
                 String sessionName = "Session " + sessionCounter++;
                 Log.d(TAG, "Creating new session -> name: " + sessionName + ", date: " + dateStr);
 
-                // u dbhelper radim upcoming ili past
-                boolean success = dbHelper.insertSession(dateStr, sessionName, "");
+                // Show loading state
+                d.setEnabled(false);
+                d.setText("Creating...");
 
-                if (success) {
-                    Log.d(TAG, "Session successfully inserted into DB");
-                    Toast.makeText(getContext(), "Session added successfully", Toast.LENGTH_SHORT).show();
-                    refreshSessionList();
-                } else {
-                    Log.d(TAG, "Session insertion failed (duplicate date?)");
-                    Toast.makeText(getContext(), "Only one session per date allowed", Toast.LENGTH_SHORT).show();
-                }
-
-
+                // Create session on server in background thread
+                createSessionOnServer(dateStr, sessionName, "");
             }
         });
-
 
         // klik na item u listi -> ResultsActivity
         lista.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -147,26 +146,130 @@ public class SessionListFragment extends Fragment {
         return view;
     }
 
-
-
-    private void refreshSessionList() {
-        Log.d(TAG, "refreshSessionList START");
-
-        Session[] sessions = dbHelper.readSessions();
-        adapter.clear();
-
-        if (sessions != null) {
-            Log.d(TAG, "Loaded " + sessions.length + " sessions from DB");
-            for (Session session : sessions) {
-                Log.d(TAG, "Adding session -> name: " + session.getNaziv() +
-                        ", date: " + session.getDatum() +
-                        ", status: " + session.getAtribut());
-                adapter.addElement(session);
-            }
-        } else {
-            Log.d(TAG, "No sessions found in DB (sessions == null)");
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (executor != null) {
+            executor.shutdown();
         }
+    }
 
-        Log.d(TAG, "refreshSessionList END");
+    /**
+     * Syncs sessions from server and refreshes the list
+     */
+    private void syncAndRefreshSessionList() {
+        Log.d(TAG, "syncAndRefreshSessionList START");
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Background thread: syncing sessions from server");
+
+                // Sync sessions from server to local database
+                boolean syncSuccess = dbHelper.syncSessionsFromServer();
+                Log.d(TAG, "Sync from server result: " + syncSuccess);
+
+                // Read sessions from local database (updated with server data)
+                final Session[] sessions = dbHelper.readSessions();
+
+                // Update UI on main thread
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        adapter.clear();
+
+                        if (sessions != null) {
+                            Log.d(TAG, "Loaded " + sessions.length + " sessions from local DB");
+                            for (Session session : sessions) {
+                                Log.d(TAG, "Adding session -> name: " + session.getNaziv() +
+                                        ", date: " + session.getDatum() +
+                                        ", status: " + session.getAtribut());
+                                adapter.addElement(session);
+                            }
+                        } else {
+                            Log.d(TAG, "No sessions found in local DB");
+                        }
+
+                        Log.d(TAG, "syncAndRefreshSessionList END");
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Creates a new session on server and refreshes the list
+     */
+    private void createSessionOnServer(String date, String sessionName, String description) {
+        Log.d(TAG, "createSessionOnServer START -> date: " + date + ", name: " + sessionName);
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Background thread: creating session on server");
+
+                // Create session on server (which also updates local database)
+                boolean success = dbHelper.createSessionOnServer(date, sessionName, description);
+
+                // Update UI on main thread
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Reset button state
+                        d.setEnabled(true);
+                        d.setText(getString(R.string.submit));
+
+                        if (success) {
+                            Log.d(TAG, "Session successfully created on server");
+                            Toast.makeText(getContext(), "Session added successfully", Toast.LENGTH_SHORT).show();
+
+                            // Refresh the session list to show the new session
+                            refreshSessionListFromLocal();
+                        } else {
+                            Log.d(TAG, "Failed to create session on server");
+                            Toast.makeText(getContext(), "Failed to create session. Check network connection.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Refreshes the session list from local database only (faster for UI updates)
+     */
+    private void refreshSessionListFromLocal() {
+        Log.d(TAG, "refreshSessionListFromLocal START");
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final Session[] sessions = dbHelper.readSessions();
+
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        adapter.clear();
+
+                        if (sessions != null) {
+                            Log.d(TAG, "Refreshed " + sessions.length + " sessions from local DB");
+                            for (Session session : sessions) {
+                                adapter.addElement(session);
+                            }
+                        }
+
+                        Log.d(TAG, "refreshSessionListFromLocal END");
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Public method to refresh sessions (can be called from parent activity)
+     */
+    public void refreshSessions() {
+        Log.d(TAG, "Public refreshSessions called");
+        syncAndRefreshSessionList();
     }
 }

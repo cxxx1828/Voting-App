@@ -50,7 +50,7 @@ public class LoginActivity extends AppCompatActivity {
         btn1.setBackgroundColor(getColor(R.color.blue));
 
         bundle = new Bundle();
-        dbHelper = new DecideItDbHelper(this, "decideit.db", null, 1);
+        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 1);
 
         btn1.setOnClickListener(new View.OnClickListener() {
             @Override

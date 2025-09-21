@@ -8,15 +8,25 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 
 public class DecideItDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "DB_DEBUG";
+    private HttpHelper httpHelper;
 
     // Tabela USERS
     private final String TABLE_USERS = "USERS";
@@ -33,6 +43,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     public static final String COL_SESSION_NAME = "SessionName";
     public static final String COL_DESCRIPTION = "Description";
     public static final String COL_END_TIME = "EndTime";
+    public static final String COL_SERVER_ID = "ServerId"; // MongoDB _id
 
     // Tabela VOTES
     private final String TABLE_VOTES = "VOTES";
@@ -41,14 +52,15 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     public static final String COL_ABSTAIN = "AbstainVotes";
     public static final String COL_VOTE_SESSION_NAME = "SessionName";
     public static final String COL_VOTE_DATE = "SessionDate";
+    public static final String COL_VOTE_SERVER_ID = "ServerSessionId"; // MongoDB session _id
 
     public DecideItDbHelper(@Nullable Context context, @Nullable String name, @Nullable SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
+        httpHelper = new HttpHelper();
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-
         Log.d(TAG, "Creating tables");
 
         // USERS
@@ -61,29 +73,336 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                 COL_ROLE + " TEXT);");
         Log.d(TAG, "Table USERS created");
 
-        // SESSIONS
+        // SESSIONS - added ServerId column
         db.execSQL("CREATE TABLE " + TABLE_SESSIONS + " (" +
                 COL_DATE + " TEXT, " +
                 COL_SESSION_NAME + " TEXT, " +
                 COL_DESCRIPTION + " TEXT, " +
                 COL_END_TIME + " TEXT, " +
+                COL_SERVER_ID + " TEXT, " +
                 "UNIQUE(" + COL_DATE + ", " + COL_SESSION_NAME + "));");
         Log.d(TAG, "Table SESSIONS created");
 
-        // VOTES
+        // VOTES - added ServerSessionId column
         db.execSQL("CREATE TABLE " + TABLE_VOTES + " (" +
                 COL_YES + " INTEGER, " +
                 COL_NO + " INTEGER, " +
                 COL_ABSTAIN + " INTEGER, " +
                 COL_VOTE_SESSION_NAME + " TEXT, " +
-                COL_VOTE_DATE + " TEXT);");
+                COL_VOTE_DATE + " TEXT, " +
+                COL_VOTE_SERVER_ID + " TEXT);");
         Log.d(TAG, "Table VOTES created");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // Add ServerId column to SESSIONS if upgrading
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN " + COL_SERVER_ID + " TEXT");
+            Log.d(TAG, "Added ServerId column to SESSIONS");
+        } catch (Exception e) {
+            Log.d(TAG, "ServerId column already exists or error adding it");
+        }
 
+        try {
+            db.execSQL("ALTER TABLE " + TABLE_VOTES + " ADD COLUMN " + COL_VOTE_SERVER_ID + " TEXT");
+            Log.d(TAG, "Added ServerSessionId column to VOTES");
+        } catch (Exception e) {
+            Log.d(TAG, "ServerSessionId column already exists or error adding it");
+        }
     }
+
+    // =================== HTTP SYNC METHODS ===================
+
+    /**
+     * Syncs sessions from server to local database
+     */
+    public boolean syncSessionsFromServer() {
+        try {
+            Log.d(TAG, "Syncing sessions from server...");
+            JSONArray sessions = httpHelper.getJSONArrayFromURL(HttpHelper.BASE_URL + "/sessions");
+
+            if (sessions == null) {
+                Log.e(TAG, "Failed to get sessions from server");
+                return false;
+            }
+
+            SQLiteDatabase db = getWritableDatabase();
+
+            for (int i = 0; i < sessions.length(); i++) {
+                JSONObject session = sessions.getJSONObject(i);
+
+                String serverId = session.getString("_id");
+                String sessionName = session.getString("sessionName");
+                String description = session.optString("description", "");
+                String dateStr = session.getString("date");
+                String endTimeStr = session.getString("endOfVotingTime");
+
+                // Convert ISO date to our format
+                String formattedDate = formatDateFromISO(dateStr);
+
+                // Check if session already exists
+                Cursor cursor = db.query(TABLE_SESSIONS, null,
+                        COL_SERVER_ID + " =?", new String[]{serverId}, null, null, null);
+
+                ContentValues values = new ContentValues();
+                values.put(COL_DATE, formattedDate);
+                values.put(COL_SESSION_NAME, sessionName);
+                values.put(COL_DESCRIPTION, description);
+                values.put(COL_END_TIME, endTimeStr);
+                values.put(COL_SERVER_ID, serverId);
+
+                if (cursor.getCount() > 0) {
+                    // Update existing
+                    db.update(TABLE_SESSIONS, values, COL_SERVER_ID + " =?", new String[]{serverId});
+                    Log.d(TAG, "Updated session: " + sessionName);
+                } else {
+                    // Insert new
+                    db.insert(TABLE_SESSIONS, null, values);
+                    Log.d(TAG, "Inserted new session: " + sessionName);
+                }
+                cursor.close();
+            }
+
+            db.close();
+            Log.d(TAG, "Successfully synced " + sessions.length() + " sessions from server");
+            return true;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error syncing sessions from server", e);
+            return false;
+        }
+    }
+
+    /**
+     * Creates session on server and updates local database
+     */
+    public boolean createSessionOnServer(String date, String sessionName, String description) {
+        try {
+            Log.d(TAG, "Creating session on server: " + sessionName);
+
+            // Convert date to ISO format
+            String isoDate = formatDateToISO(date);
+            String endTime = formatDateToISO(date, 3); // 3 hours later
+
+            JSONObject sessionData = new JSONObject();
+            sessionData.put("date", isoDate);
+            sessionData.put("sessionName", sessionName);
+            sessionData.put("description", description);
+            sessionData.put("endOfVotingTime", endTime);
+
+            JSONObject response = httpHelper.postJSONObjectFromURL(HttpHelper.BASE_URL + "/session", sessionData);
+
+            if (response == null) {
+                Log.e(TAG, "Failed to create session on server");
+                return false;
+            }
+
+            // Get the created session data
+            JSONObject createdSession = response.getJSONObject("session");
+            String serverId = createdSession.getString("_id");
+
+            // Insert/update in local database with server ID
+            SQLiteDatabase db = getWritableDatabase();
+            ContentValues values = new ContentValues();
+            values.put(COL_DATE, date);
+            values.put(COL_SESSION_NAME, sessionName);
+            values.put(COL_DESCRIPTION, description);
+            values.put(COL_END_TIME, endTime);
+            values.put(COL_SERVER_ID, serverId);
+
+            long result = db.insert(TABLE_SESSIONS, null, values);
+            db.close();
+
+            Log.d(TAG, "Successfully created session on server with ID: " + serverId);
+            return result != -1;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating session on server", e);
+            return false;
+        }
+    }
+
+    /**
+     * Syncs votes for a specific session from server
+     */
+    public boolean syncVotesFromServer(String sessionServerId) {
+        try {
+            Log.d(TAG, "Syncing votes from server for session: " + sessionServerId);
+
+            JSONArray votes = httpHelper.getJSONArrayFromURL(HttpHelper.BASE_URL + "/votes?sessionId=" + sessionServerId);
+
+            if (votes == null || votes.length() == 0) {
+                Log.d(TAG, "No votes found on server for session: " + sessionServerId);
+                return true; // Not an error, just no votes yet
+            }
+
+            JSONObject vote = votes.getJSONObject(0); // Should be only one vote record per session
+
+            int yes = vote.getInt("yes");
+            int no = vote.getInt("no");
+            int abstain = vote.getInt("abstain");
+            String sessionName = vote.getString("sessionName");
+            String sessionDate = formatDateFromISO(vote.getString("sessionDate"));
+
+            SQLiteDatabase db = getWritableDatabase();
+
+            // Check if vote record exists
+            Cursor cursor = db.query(TABLE_VOTES, null,
+                    COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId}, null, null, null);
+
+            ContentValues values = new ContentValues();
+            values.put(COL_YES, yes);
+            values.put(COL_NO, no);
+            values.put(COL_ABSTAIN, abstain);
+            values.put(COL_VOTE_SESSION_NAME, sessionName);
+            values.put(COL_VOTE_DATE, sessionDate);
+            values.put(COL_VOTE_SERVER_ID, sessionServerId);
+
+            if (cursor.getCount() > 0) {
+                // Update existing
+                db.update(TABLE_VOTES, values, COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId});
+                Log.d(TAG, "Updated votes for session: " + sessionName);
+            } else {
+                // Insert new
+                db.insert(TABLE_VOTES, null, values);
+                Log.d(TAG, "Inserted new votes for session: " + sessionName);
+            }
+
+            cursor.close();
+            db.close();
+            return true;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error syncing votes from server", e);
+            return false;
+        }
+    }
+
+    /**
+     * Submits vote to server and updates local database
+     */
+    public boolean submitVoteToServer(String sessionServerId, String sessionName, String sessionDate, int voteType) {
+        try {
+            Log.d(TAG, "Submitting vote to server: " + voteType + " for session: " + sessionServerId);
+
+            String voteString;
+            switch (voteType) {
+                case 1: voteString = "yes"; break;
+                case 2: voteString = "no"; break;
+                case 3: voteString = "abstain"; break;
+                default:
+                    Log.e(TAG, "Invalid vote type: " + voteType);
+                    return false;
+            }
+
+            JSONObject voteData = new JSONObject();
+            voteData.put("sessionId", sessionServerId);
+            voteData.put("vote", voteString);
+
+            JSONObject response = httpHelper.postJSONObjectFromURL(HttpHelper.BASE_URL + "/results/vote", voteData);
+
+            if (response == null) {
+                Log.e(TAG, "Failed to submit vote to server");
+                return false;
+            }
+
+            // Update local database with new vote counts
+            JSONObject votes = response.getJSONObject("votes");
+            int yes = votes.getInt("yes");
+            int no = votes.getInt("no");
+            int abstain = votes.getInt("abstain");
+
+            SQLiteDatabase db = getWritableDatabase();
+
+            // Update or insert vote record
+            Cursor cursor = db.query(TABLE_VOTES, null,
+                    COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId}, null, null, null);
+
+            ContentValues values = new ContentValues();
+            values.put(COL_YES, yes);
+            values.put(COL_NO, no);
+            values.put(COL_ABSTAIN, abstain);
+            values.put(COL_VOTE_SESSION_NAME, sessionName);
+            values.put(COL_VOTE_DATE, sessionDate);
+            values.put(COL_VOTE_SERVER_ID, sessionServerId);
+
+            if (cursor.getCount() > 0) {
+                db.update(TABLE_VOTES, values, COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId});
+            } else {
+                db.insert(TABLE_VOTES, null, values);
+            }
+
+            cursor.close();
+            db.close();
+
+            Log.d(TAG, "Successfully submitted vote and updated local database");
+            return true;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error submitting vote to server", e);
+            return false;
+        }
+    }
+
+    /**
+     * Gets server ID for a session by date and name
+     */
+    public String getSessionServerId(String sessionName, String sessionDate) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.query(TABLE_SESSIONS, new String[]{COL_SERVER_ID},
+                COL_SESSION_NAME + " =? AND " + COL_DATE + " =?",
+                new String[]{sessionName, sessionDate}, null, null, null);
+
+        String serverId = null;
+        if (cursor.moveToFirst()) {
+            serverId = cursor.getString(cursor.getColumnIndexOrThrow(COL_SERVER_ID));
+        }
+
+        cursor.close();
+        db.close();
+        return serverId;
+    }
+
+    // =================== DATE FORMATTING HELPERS ===================
+
+    private String formatDateFromISO(String isoDate) {
+        try {
+            // Parse ISO date: "2025-09-20T10:00:00.000Z"
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            SimpleDateFormat displayFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+            Date date = isoFormat.parse(isoDate);
+            return displayFormat.format(date);
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing ISO date: " + isoDate, e);
+            return isoDate;
+        }
+    }
+
+    private String formatDateToISO(String displayDate) {
+        return formatDateToISO(displayDate, 0);
+    }
+
+    private String formatDateToISO(String displayDate, int hoursToAdd) {
+        try {
+            // Parse display date: "20.09.2025"
+            SimpleDateFormat displayFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            Date date = displayFormat.parse(displayDate);
+
+            // Add hours if specified
+            if (hoursToAdd > 0) {
+                date = new Date(date.getTime() + hoursToAdd * 60 * 60 * 1000);
+            }
+
+            return isoFormat.format(date);
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting date to ISO: " + displayDate, e);
+            return displayDate;
+        }
+    }
+
+    // =================== EXISTING METHODS (keeping compatibility) ===================
 
     private String hashPassword(String password) {
         try {
@@ -96,7 +415,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
             throw new RuntimeException(e);
         }
     }
-
 
     public boolean insertUser(String name, String surname, String username, String index, String password, String role) {
         SQLiteDatabase db = null;
@@ -127,8 +445,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-
-    // autentifikacija korisnika, za LoginActivity
     public String[] authenticateUser(String username, String password) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -137,13 +453,11 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
             db = getReadableDatabase();
             String hashedPassword = hashPassword(password);
 
-            //cursor su svi elementi tabele, tabelica je kursor, ima svoje metode, znaci to malo cursor vraca tabelicu
             cursor = db.query(TABLE_USERS, null,
                     COL_USERNAME + " =? AND " + COL_PASSWORD + " =?",
                     new String[]{username, hashedPassword}, null, null, null);
 
             String[] userInfo = null;
-            //prebaci ga na prvog i to vrati
             if (cursor.moveToFirst()) {
                 userInfo = new String[3];
                 userInfo[0] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NAME));
@@ -191,10 +505,8 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         try {
             Log.d(TAG, "Reading all students");
             db = getReadableDatabase();
-            //new String[] {"student"} lista od jednog studenta instancirana
             cursor = db.query(TABLE_USERS, null, COL_ROLE + " =?", new String[]{"student"}, null, null, null);
 
-            //cursor.getCOunt broj elemenata u tabeli vraca, pa nam je to velicina novog niza
             if (cursor.getCount() <= 0) {
                 Log.d(TAG, "No students found");
                 return null;
@@ -238,9 +550,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         String surname = cursor.getString(cursor.getColumnIndexOrThrow(COL_SURNAME));
         String index = cursor.getString(cursor.getColumnIndexOrThrow(COL_INDEX));
         String username = cursor.getString(cursor.getColumnIndexOrThrow(COL_USERNAME));
-        //cursor omogucava getColumnIndex, koji dobavi indeks kolone a mi ga konvertujemo u string
-        //vraca index, getColumnIndexOrThrow wrapujemo sa getString da vrati string
-        //za svaki element vracamo na string jer nam je taj podatak u originalu string
 
         int imageResId = R.drawable.male_student;
 
@@ -249,44 +558,9 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         return new Student(imageResId, name, surname, index, false, username);
     }
 
-
     public boolean insertSession(String date, String sessionName, String description) {
-        SQLiteDatabase db = null;
-        Cursor cursor = null;
-        try {
-            Log.d(TAG, "Inserting session: " + sessionName + " Date: " + date);
-            db = getWritableDatabase();
-
-            // proverim da li već postoji sesija za ovaj datum
-            cursor = db.query(TABLE_SESSIONS, null,
-                    COL_DATE + " =?", new String[]{date}, null, null, null);
-
-            if (cursor.getCount() > 0) {
-                Log.d(TAG, "Session already exists for date: " + date);
-                return false; // ako već postoji sesija za ovaj datum false
-            }
-
-            // 3 dana unapred
-            long endTime = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(3);
-
-            ContentValues values = new ContentValues();
-            values.put(COL_DATE, date);
-            values.put(COL_SESSION_NAME, sessionName);
-            values.put(COL_DESCRIPTION, description);
-            values.put(COL_END_TIME, String.valueOf(endTime));
-
-            db.insert(TABLE_SESSIONS, null, values);
-
-            return true;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error inserting session", e);
-            return false;
-        } finally {
-            if (cursor != null && !cursor.isClosed()) cursor.close();
-            if (db != null && db.isOpen()) db.close();
-            Log.d(TAG, "Database closed after insertSession");
-        }
+        // Use the new HTTP method instead
+        return createSessionOnServer(date, sessionName, description);
     }
 
     public Session[] readSessions() {
@@ -376,20 +650,49 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         String endTimeStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_END_TIME));
 
         long currentTime = System.currentTimeMillis();
-        long endTime = Long.parseLong(endTimeStr);
-        String status = (endTime > currentTime) ? "UPCOMING" : "PAST";
+        String status;
+
+        try {
+            // Try to parse as ISO format first
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            Date endTime = isoFormat.parse(endTimeStr);
+            status = (endTime.getTime() > currentTime) ? "UPCOMING" : "PAST";
+        } catch (Exception e) {
+            // Fallback to old format or default
+            try {
+                long endTime = Long.parseLong(endTimeStr);
+                status = (endTime > currentTime) ? "UPCOMING" : "PAST";
+            } catch (NumberFormatException ex) {
+                status = "UPCOMING"; // Default
+            }
+        }
 
         Log.d(TAG, "Creating session object -> name: " + sessionName + ", date: " + date + ", status: " + status);
 
-        // PAZI REDOSLED
         return new Session(date, sessionName, status);
     }
 
     public boolean insertOrUpdateVote(String sessionName, String sessionDate, int voteType) {
+        // Get server ID for this session
+        String serverId = getSessionServerId(sessionName, sessionDate);
+
+        if (serverId != null) {
+            // Submit to server first
+            boolean serverSuccess = submitVoteToServer(serverId, sessionName, sessionDate, voteType);
+            if (serverSuccess) {
+                return true; // Local database is already updated in submitVoteToServer
+            }
+        }
+
+        // Fallback to local-only update if server fails
+        return insertOrUpdateVoteLocal(sessionName, sessionDate, voteType);
+    }
+
+    private boolean insertOrUpdateVoteLocal(String sessionName, String sessionDate, int voteType) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
         try {
-            Log.d("DB_DEBUG", "insertOrUpdateVote START -> sessionName: " + sessionName +
+            Log.d("DB_DEBUG", "insertOrUpdateVoteLocal START -> sessionName: " + sessionName +
                     ", sessionDate: " + sessionDate + ", voteType: " + voteType);
 
             db = getWritableDatabase();
@@ -403,7 +706,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
             ContentValues values = new ContentValues();
             if (cursor != null && cursor.moveToFirst()) {
-                // ako postoji, novi ++
                 int yes = cursor.getInt(cursor.getColumnIndexOrThrow(COL_YES));
                 int no = cursor.getInt(cursor.getColumnIndexOrThrow(COL_NO));
                 int abstain = cursor.getInt(cursor.getColumnIndexOrThrow(COL_ABSTAIN));
@@ -434,9 +736,8 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                         new String[]{sessionName, sessionDate});
 
                 Log.d("DB_DEBUG", "Updated rows: " + rows);
-                return rows > 0; // true ako je bar jedan red promenjen
+                return rows > 0;
             } else {
-                // novi glasovi, pa inicijalizujem polja
                 int yes = 0, no = 0, abstain = 0;
                 if (voteType == 1) {
                     yes = 1;
@@ -463,25 +764,31 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                 return id != -1;
             }
         } catch (Exception e) {
-            Log.e("DB_DEBUG", "Error in insertOrUpdateVote", e);
+            Log.e("DB_DEBUG", "Error in insertOrUpdateVoteLocal", e);
             return false;
         } finally {
             if (cursor != null && !cursor.isClosed()) {
                 cursor.close();
-                Log.d("DB_DEBUG", "Cursor closed in insertOrUpdateVote");
+                Log.d("DB_DEBUG", "Cursor closed in insertOrUpdateVoteLocal");
             }
             if (db != null && db.isOpen()) {
                 db.close();
-                Log.d("DB_DEBUG", "DB closed in insertOrUpdateVote");
+                Log.d("DB_DEBUG", "DB closed in insertOrUpdateVoteLocal");
             }
         }
     }
 
     public int[] getVoteResults(String sessionName, String sessionDate) {
+        // First try to sync from server
+        String serverId = getSessionServerId(sessionName, sessionDate);
+        if (serverId != null) {
+            syncVotesFromServer(serverId);
+        }
+
         Log.d("DB_DEBUG", "getVoteResults START -> sessionName: " + sessionName +
                 ", sessionDate: " + sessionDate);
 
-        int[] results = new int[3]; // [yes, no, abstain]
+        int[] results = new int[3];
         SQLiteDatabase db = null;
         Cursor cursor = null;
 
@@ -517,7 +824,4 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
         return results;
     }
-
-
-
 }

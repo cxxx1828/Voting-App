@@ -1,6 +1,8 @@
 package com.nina.dragicevic;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -14,6 +16,9 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class DecideActivity extends AppCompatActivity {
 
     ImageView im;
@@ -25,7 +30,11 @@ public class DecideActivity extends AppCompatActivity {
     String sessionName;
     String sessionDate;
     Session currentSession;
+    ExecutorService executor;
+    Handler mainHandler;
+
     private static final String TAG = "DECIDE_DEBUG";
+    private boolean isVoting = false; // To prevent multiple votes
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +52,9 @@ public class DecideActivity extends AppCompatActivity {
         btn2 = findViewById(R.id.b2);
         btn3 = findViewById(R.id.b3);
 
-        dbHelper = new DecideItDbHelper(this, "decideit.db", null, 1);
+        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 1);
+        executor = Executors.newSingleThreadExecutor();
+        mainHandler = new Handler(Looper.getMainLooper());
 
         // iz intenta ime i datum
         sessionName = getIntent().getStringExtra("sessionName");
@@ -82,6 +93,8 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "YES button clicked");
+                if (isVoting) return; // Prevent multiple clicks during voting
+
                 if (selected == null) {
                     btn1.setBackgroundColor(getColor(R.color.red));
                     btn2.setBackgroundColor(getColor(R.color.blue));
@@ -102,18 +115,9 @@ public class DecideActivity extends AppCompatActivity {
         btn1.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (selected == btn1) {
+                if (selected == btn1 && !isVoting) {
                     Log.d(TAG, "Submitting YES vote for session: " + sessionName + ", date: " + sessionDate);
-                    boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, 1);
-
-                    if (success) {
-                        Log.d(TAG, "YES vote submitted successfully");
-                        Toast.makeText(DecideActivity.this, "YES vote submitted!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    } else {
-                        Log.e(TAG, "Failed to submit YES vote");
-                        Toast.makeText(DecideActivity.this, "Failed to submit vote", Toast.LENGTH_SHORT).show();
-                    }
+                    submitVote(1, "YES");
                 }
                 return true;
             }
@@ -123,6 +127,8 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "NO button clicked");
+                if (isVoting) return; // Prevent multiple clicks during voting
+
                 if (selected == null) {
                     btn2.setBackgroundColor(getColor(R.color.red));
                     btn1.setBackgroundColor(getColor(R.color.blue));
@@ -143,18 +149,9 @@ public class DecideActivity extends AppCompatActivity {
         btn2.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (selected == btn2) {
+                if (selected == btn2 && !isVoting) {
                     Log.d(TAG, "Submitting NO vote for session: " + sessionName + ", date: " + sessionDate);
-                    boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, 2);
-
-                    if (success) {
-                        Log.d(TAG, "NO vote submitted successfully");
-                        Toast.makeText(DecideActivity.this, "NO vote submitted!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    } else {
-                        Log.e(TAG, "Failed to submit NO vote");
-                        Toast.makeText(DecideActivity.this, "Failed to submit vote", Toast.LENGTH_SHORT).show();
-                    }
+                    submitVote(2, "NO");
                 }
                 return true;
             }
@@ -164,6 +161,8 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "ABSTAIN button clicked");
+                if (isVoting) return; // Prevent multiple clicks during voting
+
                 if (selected == null) {
                     btn3.setBackgroundColor(getColor(R.color.red));
                     btn1.setBackgroundColor(getColor(R.color.blue));
@@ -184,18 +183,9 @@ public class DecideActivity extends AppCompatActivity {
         btn3.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (selected == btn3) {
+                if (selected == btn3 && !isVoting) {
                     Log.d(TAG, "Submitting ABSTAIN vote for session: " + sessionName + ", date: " + sessionDate);
-                    boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, 3);
-
-                    if (success) {
-                        Log.d(TAG, "ABSTAIN vote submitted successfully");
-                        Toast.makeText(DecideActivity.this, "ABSTAIN vote submitted!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    } else {
-                        Log.e(TAG, "Failed to submit ABSTAIN vote");
-                        Toast.makeText(DecideActivity.this, "Failed to submit vote", Toast.LENGTH_SHORT).show();
-                    }
+                    submitVote(3, "ABSTAIN");
                 }
                 return true;
             }
@@ -205,6 +195,102 @@ public class DecideActivity extends AppCompatActivity {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (executor != null) {
+            executor.shutdown();
+        }
+    }
+
+    /**
+     * Submits vote to server and updates UI
+     */
+    private void submitVote(int voteType, String voteLabel) {
+        if (isVoting) {
+            Log.d(TAG, "Already voting, ignoring request");
+            return;
+        }
+
+        isVoting = true;
+
+        // Show loading state
+        mainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                btn1.setEnabled(false);
+                btn2.setEnabled(false);
+                btn3.setEnabled(false);
+
+                if (selected != null) {
+                    selected.setText("Voting...");
+                }
+
+                Toast.makeText(DecideActivity.this, "Submitting " + voteLabel + " vote...", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Background thread: submitting vote to server");
+
+                // Submit vote using the updated method (which handles HTTP communication)
+                boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, voteType);
+
+                // Update UI on main thread
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        isVoting = false;
+
+                        // Reset button states
+                        btn1.setEnabled(true);
+                        btn2.setEnabled(true);
+                        btn3.setEnabled(true);
+
+                        btn1.setText(getString(R.string.yes));
+                        btn2.setText(getString(R.string.no));
+                        btn3.setText(getString(R.string.abstain));
+
+                        if (success) {
+                            Log.d(TAG, voteLabel + " vote submitted successfully");
+                            Toast.makeText(DecideActivity.this, voteLabel + " vote submitted successfully!", Toast.LENGTH_SHORT).show();
+
+                            // Reset selection
+                            selected = null;
+                            btn1.setBackgroundColor(getColor(R.color.blue));
+                            btn2.setBackgroundColor(getColor(R.color.blue));
+                            btn3.setBackgroundColor(getColor(R.color.blue));
+
+                            // Close activity after successful vote
+                            finish();
+
+                        } else {
+                            Log.e(TAG, "Failed to submit " + voteLabel + " vote");
+                            Toast.makeText(DecideActivity.this, "Failed to submit vote. Check network connection.", Toast.LENGTH_LONG).show();
+
+                            // Reset button colors but keep selection
+                            if (selected == btn1) {
+                                btn1.setBackgroundColor(getColor(R.color.red));
+                                btn2.setBackgroundColor(getColor(R.color.blue));
+                                btn3.setBackgroundColor(getColor(R.color.blue));
+                            } else if (selected == btn2) {
+                                btn2.setBackgroundColor(getColor(R.color.red));
+                                btn1.setBackgroundColor(getColor(R.color.blue));
+                                btn3.setBackgroundColor(getColor(R.color.blue));
+                            } else if (selected == btn3) {
+                                btn3.setBackgroundColor(getColor(R.color.red));
+                                btn1.setBackgroundColor(getColor(R.color.blue));
+                                btn2.setBackgroundColor(getColor(R.color.blue));
+                            }
+                        }
+                    }
+                });
+            }
         });
     }
 }
