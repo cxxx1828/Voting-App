@@ -118,7 +118,7 @@ public class StudentListFragment extends Fragment {
 //        adapter = new StudentAdapter(getContext(), studenti);
 //        lista.setAdapter(adapter);
 
-        dbHelper = new DecideItDbHelper(getContext(), "decideit.db", null, 1);
+        dbHelper = new DecideItDbHelper(getContext(), "decideit_v2.db", null, 1);
         adapter = new StudentAdapter(getContext(), new ArrayList<>(), this);
         lista.setAdapter(adapter);
         Log.d("STUDENT_LIST_DEBUG", "Adapter set, calling refreshStudentList()");

@@ -19,7 +19,6 @@
         android:id="@+id/surname"
         android:layout_weight="2"
         android:layout_gravity="center_vertical"
-        android:padding="4dp"
         />
 
     <TextView
