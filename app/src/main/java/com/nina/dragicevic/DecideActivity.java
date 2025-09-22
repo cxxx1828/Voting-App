@@ -34,7 +34,7 @@ public class DecideActivity extends AppCompatActivity {
     Handler mainHandler;
 
     private static final String TAG = "DECIDE_DEBUG";
-    private boolean isVoting = false; // To prevent multiple votes
+    private boolean isVoting = false; // da izbegnemo duplo glasanje
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +93,7 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "YES button clicked");
-                if (isVoting) return; // Prevent multiple clicks during voting
+                if (isVoting) return; // da nema duplog glasanja
 
                 if (selected == null) {
                     btn1.setBackgroundColor(getColor(R.color.red));
@@ -127,7 +127,7 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "NO button clicked");
-                if (isVoting) return; // Prevent multiple clicks during voting
+                if (isVoting) return;
 
                 if (selected == null) {
                     btn2.setBackgroundColor(getColor(R.color.red));
@@ -161,7 +161,7 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "ABSTAIN button clicked");
-                if (isVoting) return; // Prevent multiple clicks during voting
+                if (isVoting) return;
 
                 if (selected == null) {
                     btn3.setBackgroundColor(getColor(R.color.red));
@@ -217,7 +217,7 @@ public class DecideActivity extends AppCompatActivity {
 
         isVoting = true;
 
-        // Show loading state
+        // da prikazem promenu stanja
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -238,16 +238,16 @@ public class DecideActivity extends AppCompatActivity {
             public void run() {
                 Log.d(TAG, "Background thread: submitting vote to server");
 
-                // Submit vote using the updated method (which handles HTTP communication)
+                //submitujem glas ali sad http serveru
                 boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, voteType);
 
-                // Update UI on main thread
+                // updateujem UI na main niti
                 mainHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         isVoting = false;
 
-                        // Reset button states
+                        // resetujem duggmad
                         btn1.setEnabled(true);
                         btn2.setEnabled(true);
                         btn3.setEnabled(true);
@@ -260,20 +260,20 @@ public class DecideActivity extends AppCompatActivity {
                             Log.d(TAG, voteLabel + " vote submitted successfully");
                             Toast.makeText(DecideActivity.this, voteLabel + " vote submitted successfully!", Toast.LENGTH_SHORT).show();
 
-                            // Reset selection
+                            // resetujem selekciju
                             selected = null;
                             btn1.setBackgroundColor(getColor(R.color.blue));
                             btn2.setBackgroundColor(getColor(R.color.blue));
                             btn3.setBackgroundColor(getColor(R.color.blue));
 
-                            // Close activity after successful vote
+                            //zatvorim nakon glasanja
                             finish();
 
                         } else {
                             Log.e(TAG, "Failed to submit " + voteLabel + " vote");
                             Toast.makeText(DecideActivity.this, "Failed to submit vote. Check network connection.", Toast.LENGTH_LONG).show();
 
-                            // Reset button colors but keep selection
+                            // resetujem dugmad ali zadrzim izabrano
                             if (selected == btn1) {
                                 btn1.setBackgroundColor(getColor(R.color.red));
                                 btn2.setBackgroundColor(getColor(R.color.blue));

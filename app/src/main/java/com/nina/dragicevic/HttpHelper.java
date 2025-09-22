@@ -19,10 +19,10 @@ public class HttpHelper {
 
     // HTTP status kod za uspešan zahtev
     private static final int SUCCESS = 200;
-    // Tag za Android Log sistem - za lakše praćenje u logovima
+    //  za lakše praćenje u logovima
     private static final String TAG = "HTTP_HELPER";
     // Osnovna URL adresa servera - 10.0.2.2 predstavlja localhost na Android emulatoru
-    public static final String BASE_URL = "http://10.0.2.2:8080/api"; // 10.0.2.2 for emulator, localhost for device
+    public static final String BASE_URL = "http://10.0.2.2:8080/api"; // 10.0.2.2 za emulator
 
     /**
      * HTTP GET zahtev koji vraća JSON Array
@@ -35,14 +35,14 @@ public class HttpHelper {
         // Referenca na HTTP konekciju - inicijalizujemo sa null
         HttpURLConnection urlConnection = null;
         try {
-            // Logujemo URL na koji šaljemo zahtev - za debug potrebe
+            // Logujemo URL na koji šaljemo zahtev
             Log.d(TAG, "GET Array request to: " + urlString);
             // Kreiramo URL objekat od string-a
             java.net.URL url = new URL(urlString);
             // Otvaramo HTTP konekciju prema serveru
             urlConnection = (HttpURLConnection) url.openConnection();
 
-            /*header fields*/
+            /*header polja*/
             // Postavljamo HTTP metodu na GET
             urlConnection.setRequestMethod("GET");
             // Specificiramo da očekujemo JSON odgovor
@@ -53,10 +53,10 @@ public class HttpHelper {
             urlConnection.setConnectTimeout(15000 /* milliseconds */ );
 
             // Uspostavljamo konekciju sa serverom
-            urlConnection.connect();
+            urlConnection.connect(); // Šalje HTTP zahtev serveru
 
             // Dobijamo HTTP status kod odgovora (200, 404, 500, itd.)
-            int responseCode = urlConnection.getResponseCode();
+            int responseCode = urlConnection.getResponseCode(); //  ČITANJE ODGOVORA
             Log.d(TAG, "Response code: " + responseCode);
 
             // Proveravamo da li je zahtev uspešan (status kod 200)
@@ -66,7 +66,7 @@ public class HttpHelper {
             }
 
             // Kreiramo BufferedReader za čitanje odgovora od servera
-            BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));//  ČITANJE JSON PODATAKA
             // StringBuilder za efikasno spajanje stringova
             StringBuilder sb = new StringBuilder();
             String line;
@@ -79,16 +79,16 @@ public class HttpHelper {
 
             // Konvertujemo StringBuilder u String
             String jsonString = sb.toString();
-            // Logujemo ceo JSON odgovor za debug
+            // Logujemo ceo JSON odgovor
             Log.d(TAG, "JSON Array response: " + jsonString);
 
             // Parsiramo JSON string u JSONArray objekat i vraćamo ga
             return new JSONArray(jsonString);
 
         } catch (IOException e) {
-            // Hvatamo mrežne greške (nema interneta, server nedostupan, itd.)
+            // Hvatamo mrežne greške (nema interneta, server nedostupan, itd ETCETC)
             Log.e(TAG, "Network error in getJSONArrayFromURL", e);
-            return null; // Vraćamo null umesto da aplikacija krahira
+            return null; // Vraćamo null
         } finally {
             // Finally blok se UVEK izvršava, bez obzira na to da li je bilo greške
             if (urlConnection != null) {
@@ -104,7 +104,7 @@ public class HttpHelper {
      * @param urlString - puna URL adresa za zahtev
      * @return JSONObject sa podacima ili null ako je zahtev neuspešan
      */
-    /*HTTP get json object*/
+    /*HTTP get json objekat*/
     public JSONObject getJSONObjectFromURL(String urlString) throws IOException, JSONException {
         HttpURLConnection urlConnection = null;
         try {
@@ -113,14 +113,14 @@ public class HttpHelper {
             java.net.URL url = new URL(urlString);
             urlConnection = (HttpURLConnection) url.openConnection();
 
-            /*header fields*/
+            /*header polja*/
             // Identične postavke kao za Array metodu
             urlConnection.setRequestMethod("GET");
-            urlConnection.setRequestProperty("Accept", "application/json");
+            urlConnection.setRequestProperty("Accept", "application/json"); // Želim JSON nazad
             urlConnection.setReadTimeout(10000 /* milliseconds */ );
             urlConnection.setConnectTimeout(15000 /* milliseconds */ );
 
-            urlConnection.connect();
+            urlConnection.connect();// Šalje HTTP zahtev serveru
 
             int responseCode = urlConnection.getResponseCode();
             Log.d(TAG, "Response code: " + responseCode);
@@ -179,9 +179,9 @@ public class HttpHelper {
             // I dalje očekujemo JSON odgovor
             urlConnection.setRequestProperty("Accept","application/json");
 
-            /*needed when used POST or PUT methods*/
+            /*treba nam kad koristimo POST ili PUT metode*/
             // Omogućavamo slanje podataka serveru (obavezno za POST)
-            urlConnection.setDoOutput(true);
+            urlConnection.setDoOutput(true); // KLJUČNO ZA omogućavaNJE slanja podataka
             // Omogućavamo čitanje odgovora od servera
             urlConnection.setDoInput(true);
             urlConnection.setReadTimeout(10000);
@@ -192,12 +192,12 @@ public class HttpHelper {
 
             // Kreiramo DataOutputStream za slanje JSON podataka
             DataOutputStream os = new DataOutputStream(urlConnection.getOutputStream());
-            /*write json object*/
+            /*napisi json objekat*/
             // Konvertujemo JSON objekat u string i šaljemo serveru
             os.writeBytes(jsonObject.toString());
             // Prisiljavamo slanje svih podataka (čišćenje buffer-a)
             os.flush();
-            // Zatvaramo OutputStream
+
             os.close();
 
             // Dobijamo status kod odgovora
@@ -210,7 +210,7 @@ public class HttpHelper {
                 return null;
             }
 
-            // Read response
+
             // Čitamo odgovor od servera (identično kao u GET metodama)
             BufferedReader br = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
             StringBuilder sb = new StringBuilder();
