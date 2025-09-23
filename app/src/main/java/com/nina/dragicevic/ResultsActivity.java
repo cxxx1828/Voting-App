@@ -60,7 +60,7 @@ public class ResultsActivity extends AppCompatActivity {
         t3 = findViewById(R.id.tekst3);
 
 
-        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 1);
+        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 2);
         // Kreira single-thread executor za background HTTP i database operacije
         executor = Executors.newSingleThreadExecutor();
         // Handler za komunikaciju između background thread-a i UI thread-a

@@ -52,7 +52,7 @@ public class DecideActivity extends AppCompatActivity {
         btn2 = findViewById(R.id.b2);
         btn3 = findViewById(R.id.b3);
 
-        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 1);
+        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 2);
         executor = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
 

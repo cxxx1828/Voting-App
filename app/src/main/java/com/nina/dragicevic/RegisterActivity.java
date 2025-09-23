@@ -52,7 +52,7 @@ public class RegisterActivity extends AppCompatActivity {
         btn1 = findViewById(R.id.button3);
         btn1.setBackgroundColor(getColor(R.color.blue));
 
-        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 1);
+        dbHelper = new DecideItDbHelper(this, "decideit_v2.db", null, 2);
 
         btn1.setOnClickListener(new View.OnClickListener() {
             @Override

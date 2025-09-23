@@ -136,7 +136,7 @@ public class SessionListFragment extends Fragment {
         Log.d(TAG, "ListView and EmptyView initialized");
 
         // =================== INICIJALIZACIJA DATABASE I ADAPTER KOMPONENTI ===================
-        dbHelper = new DecideItDbHelper(getContext(), "decideit_v2.db", null, 1);
+        dbHelper = new DecideItDbHelper(getContext(), "decideit_v2.db", null, 2);
         // Kreira adapter sa praznom ArrayList-om - podaci će biti dodani kasnije kada se učitaju
         adapter = new SessionAdapter(getContext(), new ArrayList<>());
         // Povezuje adapter sa ListView-om - od sada adapter kontroliše šta se prikazuje u listi

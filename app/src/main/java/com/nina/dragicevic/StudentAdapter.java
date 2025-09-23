@@ -112,11 +112,13 @@ public class StudentAdapter extends BaseAdapter {
                                     if (fragment != null) {
                                         fragment.deleteStudent(s);
                                         Toast.makeText(mContext, s.getIme() + " " + s.getPrezime() + " deleted successfully", Toast.LENGTH_SHORT).show();
-                                    }
-                                    Log.e("STUDENT_ADAPTER", "Fragment is null, cannot delete from database!");
-                                    Toast.makeText(mContext, s.getIme() + " " + s.getPrezime() + " deleted successfully", Toast.LENGTH_SHORT).show();
-                                    if (mList.isEmpty()) {
-                                        Toast.makeText(mContext, "Student list is now empty", Toast.LENGTH_SHORT).show();
+
+                                        if (mList.isEmpty()) {
+                                            Toast.makeText(mContext, "Student list is now empty", Toast.LENGTH_SHORT).show();
+                                        }
+                                    } else {
+                                        Log.e("STUDENT_ADAPTER", "Fragment is null, cannot delete from database!");
+                                        Toast.makeText(mContext, "Error: Cannot delete student", Toast.LENGTH_SHORT).show();
                                     }
                                 })
                                 .setNegativeButton("No", (dialog, which) -> {
