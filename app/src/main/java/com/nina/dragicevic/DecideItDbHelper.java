@@ -127,7 +127,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
      */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Add ServerId column to SESSIONS if upgrading
+
         // Pokušava da doda ServerId kolonu u SESSIONS tabelu
         try {
             db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN " + COL_SERVER_ID + " TEXT");

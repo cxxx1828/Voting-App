@@ -207,7 +207,7 @@ public class DecideActivity extends AppCompatActivity {
     }
 
     /**
-     * Submits vote to server and updates UI
+     * salje glasove na server i updateuje UI
      */
     private void submitVote(int voteType, String voteLabel) {
         if (isVoting) {
@@ -242,7 +242,8 @@ public class DecideActivity extends AppCompatActivity {
                 boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, voteType);
 
                 // updateujem UI na main niti
-                mainHandler.post(new Runnable() {
+                mainHandler.post(new Runnable() {  // NAZAD NA MAIN THREAD
+                    // MAIN THREAD - UI reset
                     @Override
                     public void run() {
                         isVoting = false;
