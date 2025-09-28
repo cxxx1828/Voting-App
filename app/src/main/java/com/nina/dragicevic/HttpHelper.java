@@ -15,7 +15,7 @@ public class HttpHelper {
 
 
     private static final int SUCCESS = 200;              // HTTP 200 OK
-    private static final String TAG = "HTTP_HELPER";     // Tag za Android log
+    private static final String TAG = "HTTP_HELPER";
 
     // Base URL servera - 10.0.2.2 je specijalna IP adresa koja u Android emulatoru
     // predstavlja localhost (127.0.0.1) računara na kome se pokreće emulator
