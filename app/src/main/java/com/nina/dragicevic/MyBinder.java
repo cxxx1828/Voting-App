@@ -1,7 +1,7 @@
 package com.nina.dragicevic;
 
 import android.os.Binder;
-
+//binder
 
 public class MyBinder extends Binder {
 

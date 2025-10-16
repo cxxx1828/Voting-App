@@ -24,9 +24,12 @@ public class MyService extends Service {
     private static final String CHANNEL_ID = "SESSION_NOTIFICATION_CHANNEL";
     private static final String FOREGROUND_CHANNEL_ID = "FOREGROUND_SERVICE_CHANNEL";
     private static final int NOTIFICATION_ID = 1001;
-    private static final int FOREGROUND_NOTIFICATION_ID = 1002;
-    private static final long CHECK_INTERVAL = 60 * 1000;
 
+    private static final int FOREGROUND_NOTIFICATION_ID = 1002;
+    //private static final long CHECK_INTERVAL = 60 * 1000;
+    // Linija ~26 u MyService.java - na vrhu klase
+    private static final long CHECK_INTERVAL = 60 * 1000; // 1 minut
+    private static final long NOTIFICATION_TIME = 483 * 60 * 1000; // 483 min
 
     private MyBinder binder = null;
     private Thread monitoringThread = null;
@@ -85,6 +88,7 @@ public class MyService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "Pokrećem servis kao foreground - neće ga sistem ubiti");
+
 
         // Pokrećem kao foreground service da ga Android ne ubije
         startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundNotification());
@@ -148,7 +152,7 @@ public class MyService extends Service {
      * Android zahteva da foreground servisi imaju notifikaciju
      */
     private Notification createForegroundNotification() {
-        // Intent koji će otvoriti glavnu aktivnost kada korisnik tapne notifikaciju
+        // Intent koji će otvoriti aktivnost kada korisnik tapne notifikaciju
         Intent notificationIntent = new Intent(this, StudentViewActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
@@ -169,7 +173,7 @@ public class MyService extends Service {
      */
     private void checkSessionsForNotification() {
         try {
-=            Session[] sessions = dbHelper.readSessions();
+            Session[] sessions = dbHelper.readSessions();
 
             if (sessions == null || sessions.length == 0) {
                 Log.d(TAG, "Nema sesija u bazi podataka");
@@ -229,7 +233,13 @@ public class MyService extends Service {
 
                         // KLJUČNA LOGIKA: šaljem notifikaciju ako je sesija aktivna i ostalo je manje od 75 minuta
                         // Fokusiram se na vreme
-                        if (timeUntilEnd > 0 && timeUntilEnd <= 75 * 60 * 1000) { // 75 minuta = 1 sat i 15 minuta
+//                        if (timeUntilEnd > 0 && timeUntilEnd <= 75 * 60 * 1000) { // 75 minuta = 1 sat i 15 minuta
+//                            Log.d(TAG, "Vreme do kraja: " + (timeUntilEnd / 1000 / 60) + " minuta");
+//                            Log.d(TAG, ">>> ŠALJEM NOTIFIKACIJU za sesiju: " + session.getNaziv() + " <<<");
+//                            sendSessionNotification(session);
+//                        }
+                        // Linija ~241
+                        if (timeUntilEnd > 0 && timeUntilEnd <= NOTIFICATION_TIME) {
                             Log.d(TAG, "Vreme do kraja: " + (timeUntilEnd / 1000 / 60) + " minuta");
                             Log.d(TAG, ">>> ŠALJEM NOTIFIKACIJU za sesiju: " + session.getNaziv() + " <<<");
                             sendSessionNotification(session);
@@ -254,6 +264,7 @@ public class MyService extends Service {
      * Šalje notifikaciju korisniku o sesiji koja uskoro ističe
      * Direktno otvara DecideActivity
      */
+    //push notifirkacija
     private void sendSessionNotification(Session session) {
         Log.d(TAG, "Šaljem notifikaciju za sesiju: " + session.getNaziv());
 
@@ -267,7 +278,7 @@ public class MyService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Kreiram notifikaciju sa visokim prioritetom
+        // Kreiram notifikaciju sa visokim prioritetom -------------push NOTIFIKACIJA
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle("Sesija uskoro ističe!")

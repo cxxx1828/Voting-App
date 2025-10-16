@@ -53,6 +53,9 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         surname = getIntent().getStringExtra("surname");
 
         String fullName = name + " " + surname;
+
+
+        //--------------DOZVOLA ZA NOTIFIKACIJU
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -144,6 +147,8 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
 
     //Pokreće servis kao foreground service + bind za komunikaciju
 
+
+    //------------------------------------------kreiram
     private void startSessionNotificationService() {
         Log.d(TAG, "Starting session notification service");
 
@@ -165,7 +170,7 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         }
     }
 
-    //Poziva se kada se aktivnost uspešno poveže sa servisom
+    //aktivnost uspešno povezana sa servisom
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -190,7 +195,7 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         isServiceBound = false;
     }
 
-    //Javna metoda za dobijanje trenutnog statusa servisa
+    //za dobijanje trenutnog statusa servisa
 
     public boolean isNotificationServiceRunning() {
         if (serviceBinder != null) {
@@ -199,7 +204,7 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         return false;
     }
 
-    //Javna metoda za dobijanje broja proverenih sesija
+    //za dobijanje broja proverenih sesija
 
     public int getCheckedSessionsCount() {
         if (serviceBinder != null) {
