@@ -1,459 +1,175 @@
-# DecideIT - Android Voting System Application
+# DecideIT - Android Voting System
 
+An Android voting app for students and administrators. Students can vote in sessions while admins manage users and create new voting sessions. Uses SQLite for local storage and syncs with a MongoDB backend.
 
-A complete multi-module Android voting system enabling students to participate in voting sessions while administrators manage users and sessions. Features local SQLite persistence, REST API synchronization, and real-time notifications.
+## Overview
 
----
+The app has two user roles:
+- **Students** view a calendar of voting sessions and submit votes
+- **Admins** create sessions and manage users
 
-## System Architecture
+Data is stored locally in SQLite and syncs with a Node.js/MongoDB backend when online. The app works offline and queues changes until connectivity is restored.
+
+## How It Works
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                     Android Application                       │
-├──────────────────────────────────────────────────────────────┤
-│                                                                │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐    │
-│  │     UI      │  │   Business   │  │  Data Persistence│    │
-│  │   Layer     │◄─┤    Logic     │◄─┤    (SQLite)      │    │
-│  │  (Activities│  │  (Adapters)  │  │  (Factory Pattern)│    │
-│  │  Fragments) │  │              │  │                  │    │
-│  └─────────────┘  └──────┬───────┘  └──────────────────┘    │
-│                           │                                   │
-│                    ┌──────▼────────┐                         │
-│                    │  HTTP Client  │                         │
-│                    │  (REST API)   │                         │
-│                    └──────┬────────┘                         │
-│                           │                                   │
-│                    ┌──────▼────────┐                         │
-│                    │ Background    │                         │
-│                    │ Service       │                         │
-│                    │ (Notifications)│                         │
-│                    └───────────────┘                         │
-└────────────────────────┬─────────────────────────────────────┘
-                         │
-                  HTTP/JSON (REST)
-                         │
-┌────────────────────────▼─────────────────────────────────────┐
-│                    Backend Server                             │
-├──────────────────────────────────────────────────────────────┤
-│                                                                │
-│  ┌─────────────┐        ┌──────────────┐                     │
-│  │  Express.js │◄──────►│   MongoDB    │                     │
-│  │  REST API   │        │   Database   │                     │
-│  │             │        │              │                     │
-│  │ - Sessions  │        │ - Users      │                     │
-│  │ - Voting    │        │ - Sessions   │                     │
-│  │ - Users     │        │ - Votes      │                     │
-│  └─────────────┘        └──────────────┘                     │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+Login → MainActivity → Student/Admin Views → Voting/Management
 ```
 
----
+Students see a calendar with active sessions. Clicking a session opens the voting interface. Admins get a dashboard to create new sessions and manage users.
+
+Background service checks every minute for sessions expiring soon and sends notifications 15 minutes before they end.
 
 ## Development Phases
 
-### Phase 1: UI Foundation
+### Phase 1 - Basic UI
+Built the core screens using Activities and Fragments. Set up navigation between login, main screen, and different user views. Used LinearLayout and FrameLayout with no margins per requirements.
 
-**Goal:** Establish core application structure and navigation
+Main flow:
+- LoginActivity for authentication
+- MainActivity holds StudentFragment or AdminFragment
+- StudentFragment shows calendar, opens VotingFragment
+- AdminFragment has user management and session creation
 
-**Implementation:**
-- Created multiple Activities and Fragments:
-  - Login/Registration screens
-  - Calendar view for session selection
-  - Voting interface
-  - Admin dashboard
-- Navigation flow using Intents and Fragment transactions
-- Layout system using LinearLayout and FrameLayout
-- Strict UI constraints with no margins
+### Phase 2 - Custom Adapters
+Added RecyclerView adapters for displaying lists:
+- Student list with profile pics and action buttons
+- Session list with dates and status indicators
 
-**Key Screens:**
+Implemented swipe-to-delete, confirmation dialogs, and real-time list updates.
+
+### Phase 3 - SQLite Database
+Replaced hardcoded data with proper database:
+
 ```
-LoginActivity
-    ↓
-MainActivity
-    ├──► StudentFragment (Calendar view)
-    │       └──► VotingFragment
-    └──► AdminFragment
-            ├──► UserManagementFragment
-            └──► SessionCreationFragment
+Users: id, username, password_hash, role, created_at
+Sessions: id, title, description, start_date, end_date, created_by
+Votes: id, session_id, option_selected, timestamp
 ```
 
----
-
-### Phase 2: Dynamic UI Components
-
-**Goal:** Implement custom adapters and interactive elements
-
-**Features:**
-- **Custom RecyclerView Adapters:**
-  - Student list adapter (profile images, names, actions)
-  - Voting session adapter (date, title, status indicators)
-- **Interactive UI updates:**
-  - Real-time list modifications
-  - Confirmation dialogs for destructive actions
-  - Swipe-to-delete functionality
-- **Data binding** for efficient view updates
-
-**Example Adapter Structure:**
+Used Factory Pattern for database access:
 ```java
-public class SessionAdapter extends RecyclerView.Adapter<SessionViewHolder> {
-    private List<VotingSession> sessions;
-    
-    @Override
-    public void onBindViewHolder(SessionViewHolder holder, int position) {
-        VotingSession session = sessions.get(position);
-        holder.titleText.setText(session.getTitle());
-        holder.dateText.setText(session.getDate());
-        holder.statusIcon.setImageResource(session.isActive() 
-            ? R.drawable.ic_active 
-            : R.drawable.ic_expired);
-    }
-}
+DatabaseFactory.getUserRepository(context)
+DatabaseFactory.getSessionRepository(context)
 ```
 
----
+Passwords are hashed with SHA-256. Votes are anonymous - no user_id stored.
 
-### Phase 3: Local Persistence with SQLite
+### Phase 4 - REST API
+Built Express.js backend with MongoDB. Created endpoints for:
+- GET/POST /api/sessions
+- POST /api/votes
+- GET /api/users (admin only)
+- POST /api/auth/login
 
-**Goal:** Replace hard-coded data with structured database
+Android side uses OkHttp to fetch data from server and sync with local SQLite. If something changes locally, it POSTs to the server. If there's a conflict, server timestamp wins.
 
-**Implementation:**
-- **Database Schema:**
-  ```
-  Users Table:
-  ├─ id (PRIMARY KEY)
-  ├─ username
-  ├─ password_hash (SHA-256)
-  ├─ role (STUDENT/ADMIN)
-  └─ created_at
-  
-  Sessions Table:
-  ├─ id (PRIMARY KEY)
-  ├─ title
-  ├─ description
-  ├─ start_date
-  ├─ end_date
-  └─ created_by (FOREIGN KEY → Users)
-  
-  Votes Table:
-  ├─ id (PRIMARY KEY)
-  ├─ session_id (FOREIGN KEY → Sessions)
-  ├─ option_selected
-  └─ timestamp (ANONYMOUS - no user_id)
-  ```
+Offline mode queues actions and syncs when connection comes back.
 
-- **Factory Design Pattern:**
-  ```java
-  public class DatabaseFactory {
-      public static IUserRepository getUserRepository(Context context) {
-          return new SQLiteUserRepository(context);
-      }
-      
-      public static ISessionRepository getSessionRepository(Context context) {
-          return new SQLiteSessionRepository(context);
-      }
-  }
-  ```
+### Phase 5 - Background Service
+Created a bound service that runs every minute checking for sessions about to expire. If a session ends in 15 minutes or less, it fires a notification. Tapping the notification opens that voting session directly.
 
-- **Security:**
-  - Passwords hashed using SHA-256 before storage
-  - Anonymous voting (no user tracking in votes table)
-  - SQL injection prevention using parameterized queries
-
----
-
-### Phase 4: REST API Integration
-
-**Goal:** Synchronize local data with remote MongoDB server
-
-**Backend Stack:**
-- **Node.js** with Express.js framework
-- **MongoDB** for cloud data storage
-- **RESTful API** endpoints
-
-**API Endpoints:**
-```
-GET  /api/sessions          → Retrieve all voting sessions
-POST /api/sessions          → Create new session
-GET  /api/sessions/:id      → Get specific session
-POST /api/votes             → Submit vote
-GET  /api/users             → List users (admin only)
-POST /api/auth/login        → User authentication
-```
-
-**Android HTTP Client:**
-```java
-public class ApiClient {
-    private static final String BASE_URL = "http://10.0.2.2:3000/api";
-    
-    public void getSessions(ResponseCallback callback) {
-        Request request = new Request.Builder()
-            .url(BASE_URL + "/sessions")
-            .get()
-            .build();
-            
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onResponse(Call call, Response response) {
-                String json = response.body().string();
-                List<Session> sessions = parseSessionsFromJson(json);
-                syncWithLocalDatabase(sessions);
-                callback.onSuccess(sessions);
-            }
-        });
-    }
-}
-```
-
-**Synchronization Strategy:**
-- **Download:** Fetch sessions from server → Update SQLite
-- **Upload:** New vote/session created → POST to server → Update local DB
-- **Conflict Resolution:** Server timestamp wins
-- **Offline Mode:** Queue actions, sync when connection restored
-
----
-
-### Phase 5: Background Services & Notifications
-
-**Goal:** Real-time session expiration alerts
-
-**Implementation:**
-
-**Bound Service Architecture:**
-```java
-public class SessionMonitorService extends Service {
-    private final IBinder binder = new LocalBinder();
-    private Handler handler = new Handler();
-    
-    private Runnable checkSessionsTask = new Runnable() {
-        @Override
-        public void run() {
-            List<Session> sessions = dbHelper.getActiveSessions();
-            
-            for (Session session : sessions) {
-                long timeUntilExpiry = session.getEndTime() - System.currentTimeMillis();
-                
-                if (timeUntilExpiry > 0 && timeUntilExpiry <= 15 * 60 * 1000) {
-                    showExpiryNotification(session);
-                }
-            }
-            
-            handler.postDelayed(this, 60000); // Check every minute
-        }
-    };
-    
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        handler.post(checkSessionsTask);
-        return START_STICKY;
-    }
-}
-```
-
-**Push Notification:**
-```java
-private void showExpiryNotification(Session session) {
-    Intent votingIntent = new Intent(this, VotingActivity.class);
-    votingIntent.putExtra("SESSION_ID", session.getId());
-    
-    PendingIntent pendingIntent = PendingIntent.getActivity(
-        this, 0, votingIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-    
-    Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-        .setContentTitle("Session Ending Soon!")
-        .setContentText(session.getTitle() + " expires in 15 minutes")
-        .setSmallIcon(R.drawable.ic_notification)
-        .setContentIntent(pendingIntent)
-        .setAutoCancel(true)
-        .build();
-    
-    notificationManager.notify(session.getId(), notification);
-}
-```
-
-**Features:**
-- Periodic background checks (every 60 seconds)
-- 15-minute warning threshold
-- Tap notification → Direct to voting screen
-- Works even when app is closed
-
----
-
-## Features Overview
-
-| Feature | Description | Technology |
-|---------|-------------|------------|
-| **User Authentication** | Secure login with hashed passwords | SHA-256, SQLite |
-| **Role-Based Access** | Student vs Admin permissions | Custom authorization |
-| **Session Management** | Create, view, and manage voting sessions | CRUD operations |
-| **Anonymous Voting** | Vote without user tracking | Decoupled vote records |
-| **Real-Time Sync** | Local + cloud data consistency | REST API, JSON |
-| **Offline Support** | Continue using app without connection | SQLite cache |
-| **Push Notifications** | Session expiry warnings | Background Service |
-| **Admin Dashboard** | User and session management | Custom UI |
-
----
+Works even when the app is closed. Service is START_STICKY so it restarts if killed.
 
 ## Project Structure
 
 ```
 DecideIT/
-├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/decideit/
-│   │   │   │   ├── activities/
-│   │   │   │   │   ├── LoginActivity.java
-│   │   │   │   │   ├── MainActivity.java
-│   │   │   │   │   └── VotingActivity.java
-│   │   │   │   ├── fragments/
-│   │   │   │   │   ├── StudentFragment.java
-│   │   │   │   │   ├── AdminFragment.java
-│   │   │   │   │   └── VotingFragment.java
-│   │   │   │   ├── adapters/
-│   │   │   │   │   ├── SessionAdapter.java
-│   │   │   │   │   └── StudentAdapter.java
-│   │   │   │   ├── database/
-│   │   │   │   │   ├── DatabaseHelper.java
-│   │   │   │   │   ├── DatabaseFactory.java
-│   │   │   │   │   └── repositories/
-│   │   │   │   │       ├── UserRepository.java
-│   │   │   │   │       └── SessionRepository.java
-│   │   │   │   ├── network/
-│   │   │   │   │   ├── ApiClient.java
-│   │   │   │   │   └── ResponseCallback.java
-│   │   │   │   ├── services/
-│   │   │   │   │   └── SessionMonitorService.java
-│   │   │   │   └── models/
-│   │   │   │       ├── User.java
-│   │   │   │       ├── Session.java
-│   │   │   │       └── Vote.java
-│   │   │   └── res/
-│   │   │       ├── layout/
-│   │   │       ├── drawable/
-│   │   │       └── values/
-│   │   └── androidTest/
-│   └── build.gradle
+├── app/src/main/java/com/decideit/
+│   ├── activities/
+│   │   ├── LoginActivity.java
+│   │   ├── MainActivity.java
+│   │   └── VotingActivity.java
+│   ├── fragments/
+│   │   ├── StudentFragment.java
+│   │   ├── AdminFragment.java
+│   │   └── VotingFragment.java
+│   ├── adapters/
+│   │   ├── SessionAdapter.java
+│   │   └── StudentAdapter.java
+│   ├── database/
+│   │   ├── DatabaseHelper.java
+│   │   ├── DatabaseFactory.java
+│   │   └── repositories/
+│   ├── network/
+│   │   ├── ApiClient.java
+│   │   └── ResponseCallback.java
+│   ├── services/
+│   │   └── SessionMonitorService.java
+│   └── models/
+│       ├── User.java
+│       ├── Session.java
+│       └── Vote.java
 ├── backend/
 │   ├── server.js
 │   ├── routes/
-│   │   ├── sessions.js
-│   │   ├── votes.js
-│   │   └── auth.js
 │   ├── models/
-│   │   ├── User.js
-│   │   ├── Session.js
-│   │   └── Vote.js
 │   └── package.json
 └── README.md
 ```
 
----
+## Tech Stack
 
-## Technical Stack
+**Android:**
+- Java
+- Activities/Fragments for UI
+- SQLite with Factory Pattern
+- OkHttp for HTTP
+- Bound Services for background tasks
 
-### Frontend (Android)
-- **Language:** Java
-- **IDE:** Android Studio (JetBrains)
-- **UI:** Activities, Fragments, RecyclerView
-- **Persistence:** SQLite with Factory Pattern
-- **Networking:** OkHttp / Volley
-- **Background:** Bound Services, Notifications
+**Backend:**
+- Node.js + Express.js
+- MongoDB
+- REST API with JSON
 
-### Backend (Server)
-- **Runtime:** Node.js
-- **Framework:** Express.js
-- **Database:** MongoDB
-- **API:** RESTful JSON endpoints
-- **Authentication:** JWT (optional implementation)
+## Setup
 
----
-
-## Setup Instructions
-
-### 1. Backend Setup
+Start the backend:
 ```bash
 cd backend/
 npm install
 node server.js
-# Server runs on http://localhost:3000
 ```
 
-### 2. MongoDB Configuration
-```javascript
-// backend/config/database.js
-const mongoURL = "mongodb://localhost:27017/decideit";
-mongoose.connect(mongoURL, { useNewUrlParser: true });
-```
+MongoDB should be running on localhost:27017. Update the connection string in `backend/config/database.js` if needed.
 
-### 3. Android Studio
-```bash
-# Open project in Android Studio
-File → Open → Select DecideIT folder
-
-# Update API URL in ApiClient.java
+Open the Android project in Android Studio. Update the API URL in ApiClient.java:
+```java
 private static final String BASE_URL = "http://10.0.2.2:3000/api";
-
-# Run on emulator or device
-Run → Run 'app'
 ```
 
-### 4. Test Accounts
-```
-Admin:
-Username: admin
-Password: admin123
+Run on emulator or device.
 
-Student:
-Username: student
-Password: student123
-```
+Test accounts:
+- Admin: admin / admin123
+- Student: student / student123
 
----
+## Features
 
-## Key Accomplishments
+- Login with password hashing (SHA-256)
+- Role-based access (student vs admin)
+- Create and manage voting sessions
+- Anonymous voting (no user tracking)
+- Offline support with sync queue
+- Push notifications for expiring sessions
+- Calendar view of active sessions
+- Admin dashboard for user management
 
-- **Complete MVVM-like architecture** with clean separation of concerns
-- **Dual persistence strategy:** SQLite for offline, MongoDB for cloud sync
-- **Factory Pattern** for database abstraction and scalability
-- **Background service** with intelligent notification system
-- **Secure authentication** with password hashing
-- **Anonymous voting** preserving user privacy
-- **Real-time synchronization** between local and remote data
-- **Responsive UI** with custom adapters and smooth navigation
+## What Could Be Added
 
----
-
-## Future Enhancements
-
-- [ ] End-to-end encryption for votes
-- [ ] Real-time vote tallying using WebSockets
-- [ ] Biometric authentication (fingerprint/face)
-- [ ] Dark mode theme
-- [ ] Export voting results to PDF/CSV
-- [ ] Multi-language support (i18n)
-- [ ] Firebase Cloud Messaging for push notifications
-- [ ] Material Design 3 components
-
----
+- Vote encryption
+- Real-time results with WebSockets
+- Fingerprint/face authentication
+- Dark mode
+- Export results to PDF/CSV
+- Multi-language support
+- Firebase push notifications instead of local service
+- Material Design 3
 
 ## Author
 
-**Nina Dragićević**  
-
-
----
+Nina Dragićević
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- JetBrains for Android Studio and development tools
-- Android Open Source Project for comprehensive documentation
-- MongoDB team for excellent Node.js driver
-- Express.js community for REST API best practices
+MIT
