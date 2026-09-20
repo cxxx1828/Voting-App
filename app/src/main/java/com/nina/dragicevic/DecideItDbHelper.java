@@ -22,12 +22,7 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-/**
- * DecideItDbHelper - Glavna klasa za upravljanje SQLite bazom podataka i HTTP komunikacijom
- * Nasleđuje SQLiteOpenHelper što omogućava lakše kreiranje i upravljanje SQLite bazom
- * Kombinuje lokalne database operacije sa sinhronizacijom preko HTTP servera
- * Služi kao "bridge" između aplikacije, lokalne baze i remote servera
- */
+
 public class DecideItDbHelper extends SQLiteOpenHelper {
 
 
@@ -37,16 +32,14 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
 
 
-    // Tabela USERS - čuva podatke o korisnicima (studenti i administratori)
     private final String TABLE_USERS = "USERS";
-    public static final String COL_NAME = "Name";           // Ime korisnika
-    public static final String COL_SURNAME = "Surname";     // Prezime korisnika
-    public static final String COL_USERNAME = "Username";   // Jedinstveno korisničko ime
-    public static final String COL_INDEX = "IndexNumber";   // Broj indeksa (za studente)
-    public static final String COL_PASSWORD = "Password";   // Hashovan password
-    public static final String COL_ROLE = "Role";           // Uloga: "student" ili "admin"
+    public static final String COL_NAME = "Name";           
+    public static final String COL_SURNAME = "Surname";     
+    public static final String COL_USERNAME = "Username";   
+    public static final String COL_INDEX = "IndexNumber";   
+    public static final String COL_PASSWORD = "Password";   
+    public static final String COL_ROLE = "Role";           
 
-    // Tabela SESSIONS - čuva podatke o sesijama za glasanje
     private final String TABLE_SESSIONS = "SESSIONS";
     public static final String COL_DATE = "Date";                    // Datum sesije (dd.MM.yyyy)
     public static final String COL_SESSION_NAME = "SessionName";     // Naziv sesije
@@ -54,7 +47,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     public static final String COL_END_TIME = "EndTime";            // Vreme završetka glasanja
     public static final String COL_SERVER_ID = "ServerId";          // MongoDB _id sa servera
 
-    // Tabela VOTES - čuva rezultate glasanja za svaku sesiju
     private final String TABLE_VOTES = "VOTES";
     public static final String COL_YES = "YesVotes";              // Broj YES glasova
     public static final String COL_NO = "NoVotes";                // Broj NO glasova
@@ -63,29 +55,17 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     public static final String COL_VOTE_DATE = "SessionDate";             // Datum sesije
     public static final String COL_VOTE_SERVER_ID = "ServerSessionId";    // MongoDB session _id
 
-    /**
-     * Konstruktor DecideItDbHelper klase
-     * @param context - Android kontekst (obično Activity ili Fragment)
-     * @param name - naziv database fajla
-     * @param factory - CursorFactory (obično null)
-     * @param version - verzija baze podataka (važno za migracije)
-     */
+   
     public DecideItDbHelper(@Nullable Context context, @Nullable String name, @Nullable SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
-        // Inicijalizuje HttpHelper za komunikaciju sa serverom
         httpHelper = new HttpHelper();
     }
 
-    /**
-     * Poziva se kada se baza kreira prvi put
-     * Ovde se definišu sve tabele i njihova struktura
-     * Ova metoda se izvršava samo jednom - pri prvom pokretanju aplikacije
-     */
+  
     @Override
     public void onCreate(SQLiteDatabase db) {
         Log.d(TAG, "Creating tables");
 
-        // USERS tabela - kreira tabelu za korisnike
         db.execSQL("CREATE TABLE " + TABLE_USERS + " (" +
                 COL_NAME + " TEXT, " +                    // Ime kao tekst
                 COL_SURNAME + " TEXT, " +                 // Prezime kao tekst
@@ -95,8 +75,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                 COL_ROLE + " TEXT);");                    // Uloga korisnika
         Log.d(TAG, "Table USERS created");
 
-        // SESSIONS tabela - kreira tabelu za sesije
-        // dodana kolona za server ID
+      
         db.execSQL("CREATE TABLE " + TABLE_SESSIONS + " (" +
                 COL_DATE + " TEXT, " +                    // Datum sesije
                 COL_SESSION_NAME + " TEXT, " +            // Naziv sesije
@@ -107,8 +86,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                 "UNIQUE(" + COL_DATE + ", " + COL_SESSION_NAME + "));");
         Log.d(TAG, "Table SESSIONS created");
 
-        // VOTES tabela - kreira tabelu za glasove
-        //dodana kolona za server session ID
         db.execSQL("CREATE TABLE " + TABLE_VOTES + " (" +
                 COL_YES + " INTEGER, " +                  // Broj DA glasova (brojevi)
                 COL_NO + " INTEGER, " +                   // Broj NE glasova
@@ -119,12 +96,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         Log.d(TAG, "Table VOTES created");
     }
 
-    /**
-     * Poziva se kada se verzija baze podataka poveća
-     * Ovde se dodaju nove kolone ili menjaju postojeće strukture
-     * @param oldVersion - stara verzija baze
-     * @param newVersion - nova verzija baze
-     */
+  
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 
@@ -133,11 +105,9 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN " + COL_SERVER_ID + " TEXT");
             Log.d(TAG, "Added ServerId column to SESSIONS");
         } catch (Exception e) {
-            // Hvata grešku ako kolona već postoji - ovo je normalno
             Log.d(TAG, "ServerId column already exists or error adding it");
         }
 
-        // Isto za VOTES tabelu - dodaje ServerSessionId kolonu
         try {
             db.execSQL("ALTER TABLE " + TABLE_VOTES + " ADD COLUMN " + COL_VOTE_SERVER_ID + " TEXT");
             Log.d(TAG, "Added ServerSessionId column to VOTES");
@@ -146,22 +116,12 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    // =================== HTTP  ===================
-    // Ove metode kombinuju HTTP zahteve sa lokalnim database operacijama
-
-    /**
-     * Sinhronizuje sesije sa servera u lokalnu bazu podataka
-     * Šalje GET zahtev serveru, parsira JSON odgovor i ažurira SQLite bazu
-     * Syncs sessions from server to local database
-     * @return true ako je sinhronizacija uspešna, false ako nije
-     */
+  
     public boolean syncSessionsFromServer() {
         try {
             Log.d(TAG, "Syncing sessions from server...");
-            // Šalje GET zahtev na /sessions endpoint
             JSONArray sessions = httpHelper.getJSONArrayFromURL(HttpHelper.BASE_URL + "/sessions");
 
-            // Proverava da li je server odgovorio sa podacima
             if (sessions == null) {
                 Log.e(TAG, "Failed to get sessions from server");
                 return false; // Server nije odgovorio ili je bio problem sa mrežom
@@ -170,27 +130,21 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
             SQLiteDatabase db = getWritableDatabase();
 
-            // Prolazi kroz sve sesije dobijene sa servera
             for (int i = 0; i < sessions.length(); i++) {
-                // Parsira svaku sesiju kao JSON objekat
                 JSONObject session = sessions.getJSONObject(i);
 
-                // Izvlači podatke iz JSON objekta
                 String serverId = session.getString("_id");                    // MongoDB ObjectId
                 String sessionName = session.getString("sessionName");        // Naziv sesije
                 String description = session.optString("description", "");    // Opis (ili prazan string)
                 String dateStr = session.getString("date");                   // datum
                 String endTimeStr = session.getString("endOfVotingTime");     // vreme završetka
 
-                // Konvertuje ISO datum (2025-09-20T10:00:00.000Z) u naš format (20.09.2025)
                 String formattedDate = formatDateFromISO(dateStr);
 
 
-                // Proverava da li sesija već postoji u lokalnoj bazi
                 Cursor cursor = db.query(TABLE_SESSIONS, null,
                         COL_SERVER_ID + " =?", new String[]{serverId}, null, null, null);
 
-                // Priprema podatke za insert/update
                 ContentValues values = new ContentValues();
                 values.put(COL_DATE, formattedDate);      // Formatiran datum
                 values.put(COL_SESSION_NAME, sessionName); // Naziv
@@ -198,13 +152,10 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                 values.put(COL_END_TIME, endTimeStr);     // ISO vreme završetka
                 values.put(COL_SERVER_ID, serverId);      // Server ID za buduće reference
 
-                // Proverava da li sesija već postoji
                 if (cursor.getCount() > 0) {
-                    // Update existing - ažurira postojeću sesiju
                     db.update(TABLE_SESSIONS, values, COL_SERVER_ID + " =?", new String[]{serverId});
                     Log.d(TAG, "Updated session: " + sessionName);
                 } else {
-                    // Insert new - dodaje novu sesiju
                     db.insert(TABLE_SESSIONS, null, values);
                     Log.d(TAG, "Inserted new session: " + sessionName);
                 }
@@ -213,67 +164,53 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
             db.close();
             Log.d(TAG, "Successfully synced " + sessions.length() + " sessions from server");
-            return true; // Uspešna sinhronizacija
+            return true; 
 
         } catch (Exception e) {
 
             Log.e(TAG, "Error syncing sessions from server", e);
-            return false; // Neuspešna sinhronizacija
+            return false; 
         }
     }
 
-    /**
-     * Kreira novu sesiju na serveru i ažurira lokalnu bazu
-     * Šalje POST zahtev serveru, a zatim čuva odgovor u lokalnoj bazi
-     * Creates session on server and updates local database
-     * @param date - datum sesije u dd.MM.yyyy formatu
-     * @param sessionName - naziv sesije
-     * @param description - opis sesije
-     * @return true ako je kreiranje uspešno, false ako nije
-     */
+   
     public boolean createSessionOnServer(String date, String sessionName, String description) {
         try {
             Log.d(TAG, "Creating session on server: " + sessionName);
 
-            // Konvertuje datum iz dd.MM.yyyy u ISO format (2025-09-20T00:00:00.000Z)
             String isoDate = formatDateToISO(date);
-            String endTime = formatDateToISO(date, 3); // 3 sata kasnije
+            String endTime = formatDateToISO(date, 3); 
 
-            // Kreira JSON objekat sa podacima sesije
             JSONObject sessionData = new JSONObject();
-            sessionData.put("date", isoDate);                 // ISO datum
-            sessionData.put("sessionName", sessionName);      // Naziv
-            sessionData.put("description", description);      // Opis
-            sessionData.put("endOfVotingTime", endTime);      // Vreme završetka (3h kasnije)
+            sessionData.put("date", isoDate);                 
+            sessionData.put("sessionName", sessionName);      
+            sessionData.put("description", description);      
+            sessionData.put("endOfVotingTime", endTime);    
 
-            // Šalje POST zahtev serveru
             JSONObject response = httpHelper.postJSONObjectFromURL(HttpHelper.BASE_URL + "/session", sessionData);
 
-            // Proverava da li je server uspešno kreirao sesiju
             if (response == null) {
                 Log.e(TAG, "Failed to create session on server");
                 return false;
             }
 
-            // Dobija podatke o kreiranoj sesiji iz server odgovora
             JSONObject createdSession = response.getJSONObject("session");
-            String serverId = createdSession.getString("_id"); // MongoDB ID nove sesije
+            String serverId = createdSession.getString("_id"); 
 
 
-            // Čuva novu sesiju u lokalnu bazu sa server ID-jem
             SQLiteDatabase db = getWritableDatabase();
             ContentValues values = new ContentValues();
-            values.put(COL_DATE, date);                // Originalnu format datuma
-            values.put(COL_SESSION_NAME, sessionName); // Naziv sesije
-            values.put(COL_DESCRIPTION, description);  // Opis
-            values.put(COL_END_TIME, endTime);        // ISO vreme završetka
-            values.put(COL_SERVER_ID, serverId);      // Server ID za sinhronizaciju
+            values.put(COL_DATE, date);                
+            values.put(COL_SESSION_NAME, sessionName); 
+            values.put(COL_DESCRIPTION, description);  
+            values.put(COL_END_TIME, endTime);       
+            values.put(COL_SERVER_ID, serverId);      
 
             long result = db.insert(TABLE_SESSIONS, null, values);
             db.close();
 
             Log.d(TAG, "Successfully created session on server with ID: " + serverId);
-            return result != -1; // -1 znači da insert nije uspeo
+            return result != -1; 
 
         } catch (Exception e) {
             Log.e(TAG, "Error creating session on server", e);
@@ -281,30 +218,20 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Sinhronizuje glasove za specifičnu sesiju sa servera
-     * Dobija najnovije brojke glasova sa servera i ažurira lokalnu bazu
-     * Syncs votes for a specific session from server
-     * @param sessionServerId - MongoDB ID sesije
-     * @return true ako je sinhronizacija uspešna, false ako nije
-     */
+  
     public boolean syncVotesFromServer(String sessionServerId) {
         try {
             Log.d(TAG, "Syncing votes from server for session: " + sessionServerId);
 
-            // Šalje GET zahtev sa query parametrom sessionId
             JSONArray votes = httpHelper.getJSONArrayFromURL(HttpHelper.BASE_URL + "/votes?sessionId=" + sessionServerId);
 
-            // Proverava da li postoje glasovi za ovu sesiju
             if (votes == null || votes.length() == 0) {
                 Log.d(TAG, "No votes found on server for session: " + sessionServerId);
-                return true; // nije greška samo još nema glasova
+                return true;
             }
 
-            //trebao bi biti samo jedan zapis glasova po sesiji
             JSONObject vote = votes.getJSONObject(0);
 
-            // Parsira brojke glasova iz JSON-a
             int yes = vote.getInt("yes");                                    // Broj DA glasova
             int no = vote.getInt("no");                                      // Broj NE glasova
             int abstain = vote.getInt("abstain");                           // Broj UZDRŽAN glasova
@@ -313,11 +240,9 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
             SQLiteDatabase db = getWritableDatabase();
 
-            // Check if vote record exists - proverava da li već postoji zapis glasova
             Cursor cursor = db.query(TABLE_VOTES, null,
                     COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId}, null, null, null);
 
-            // Priprema podatke za update/insert
             ContentValues values = new ContentValues();
             values.put(COL_YES, yes);                          // Broj DA glasova
             values.put(COL_NO, no);                            // Broj NE glasova
@@ -327,11 +252,9 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
             values.put(COL_VOTE_SERVER_ID, sessionServerId);   // Server ID za referencu
 
             if (cursor.getCount() > 0) {
-                // ažurira postojeći zapis
                 db.update(TABLE_VOTES, values, COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId});
                 Log.d(TAG, "Updated votes for session: " + sessionName);
             } else {
-                // kreira novi zapis glasova
                 db.insert(TABLE_VOTES, null, values);
                 Log.d(TAG, "Inserted new votes for session: " + sessionName);
             }
@@ -346,21 +269,11 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Šalje glas serveru i ažurira lokalnu bazu
-     * Koristi se kada student glasa - šalje POST zahtev i ažurira lokalne brojke
-     * Submits vote to server and updates local database
-     * @param sessionServerId - MongoDB ID sesije
-     * @param sessionName - naziv sesije
-     * @param sessionDate - datum sesije
-     * @param voteType - tip glasa: 1=yes, 2=no, 3=abstain
-     * @return true ako je glasanje uspešno, false ako nije
-     */
+   
     public boolean submitVoteToServer(String sessionServerId, String sessionName, String sessionDate, int voteType) {
         try {
             Log.d(TAG, "Submitting vote to server: " + voteType + " for session: " + sessionServerId);
 
-            // Konvertuje numerički tip glasa u string za server
             String voteString;
             switch (voteType) {
                 case 1: voteString = "yes"; break;      // DA glas
@@ -371,21 +284,17 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                     return false; // nije okej
             }
 
-            // Kreira JSON objekat sa podacima o glasu
             JSONObject voteData = new JSONObject();
             voteData.put("sessionId", sessionServerId); // MongoDB ID sesije
             voteData.put("vote", voteString);           // String reprezentacija glasa
 
-            // Šalje POST zahtev serveru na /results/vote endpoint
             JSONObject response = httpHelper.postJSONObjectFromURL(HttpHelper.BASE_URL + "/results/vote", voteData);
 
-            // Proverava da li je server uspešno zabeležio glas
             if (response == null) {
                 Log.e(TAG, "Failed to submit vote to server");
                 return false;
             }
 
-            // Ažurira lokalnu bazu sa novim brojem glasova
             JSONObject votes = response.getJSONObject("votes");
             int yes = votes.getInt("yes");         // Nova brojka DA glasova
             int no = votes.getInt("no");           // Nova brojka NE glasova
@@ -393,12 +302,11 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
 
             SQLiteDatabase db = getWritableDatabase();
 
-            //  ažurira ili kreira zapis glasova
             Cursor cursor = db.query(TABLE_VOTES, null,
                     COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId}, null, null, null);
 
             ContentValues values = new ContentValues();
-            values.put(COL_YES, yes);                          // Nove brojke sa servera
+            values.put(COL_YES, yes);                          
             values.put(COL_NO, no);
             values.put(COL_ABSTAIN, abstain);
             values.put(COL_VOTE_SESSION_NAME, sessionName);
@@ -406,10 +314,8 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
             values.put(COL_VOTE_SERVER_ID, sessionServerId);
 
             if (cursor.getCount() > 0) {
-                // Ažurira postojeći zapis
                 db.update(TABLE_VOTES, values, COL_VOTE_SERVER_ID + " =?", new String[]{sessionServerId});
             } else {
-                // Kreira novi zapis
                 db.insert(TABLE_VOTES, null, values);
             }
 
@@ -425,41 +331,24 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Dobija server ID za sesiju na osnovu datuma i naziva
-     * Potrebno za mapiranje između lokalne i server baze
-     * Gets server ID for a session by date and name
-     * @param sessionName - naziv sesije
-     * @param sessionDate - datum sesije
-     * @return MongoDB ID sesije ili null ako ne postoji
-     */
+   
     public String getSessionServerId(String sessionName, String sessionDate) {
         SQLiteDatabase db = getReadableDatabase();
-        // Traži samo ServerId kolonu za određenu sesiju
         Cursor cursor = db.query(TABLE_SESSIONS, new String[]{COL_SERVER_ID},
                 COL_SESSION_NAME + " =? AND " + COL_DATE + " =?",
                 new String[]{sessionName, sessionDate}, null, null, null);
 
         String serverId = null;
         if (cursor.moveToFirst()) {
-            // Dobija server ID ako sesija postoji
             serverId = cursor.getString(cursor.getColumnIndexOrThrow(COL_SERVER_ID));
         }
 
         cursor.close();
         db.close();
-        return serverId; // Vraća MongoDB ID ili null
+        return serverId; 
     }
 
 
-    // Helper metode za konverziju između naših datuma (dd.MM.yyyy) i ISO formata
-
-    /**
-     * Konvertuje ISO datum u naš display format
-     * Iz "2025-09-20T10:00:00.000Z" u "20.09.2025"
-     * @param isoDate - datum u ISO formatu
-     * @return datum u dd.MM.yyyy formatu
-     */
     private String formatDateFromISO(String isoDate) {
         try {
             // parsiraj ISO datum: "2025-09-20T10:00:00.000Z"
@@ -478,22 +367,12 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Konvertuje naš datum u ISO format bez dodavanja sati
-     * @param displayDate - datum u dd.MM.yyyy formatu
-     * @return datum u ISO formatu
-     */
+   
     private String formatDateToISO(String displayDate) {
-        return formatDateToISO(displayDate, 0); // Poziva preoptereću metodu bez dodavanja sati
+        return formatDateToISO(displayDate, 0); 
     }
 
-    /**
-     * Konvertuje naš datum u ISO format sa opcijom dodavanja sati
-     * Iz "20.09.2025" u "2025-09-20T03:00:00.000Z" (ako hoursToAdd = 3)
-     * @param displayDate - datum u dd.MM.yyyy formatu
-     * @param hoursToAdd - broj sati za dodavanje (za endOfVotingTime)
-     * @return datum u ISO formatu
-     */
+   
     private String formatDateToISO(String displayDate, int hoursToAdd) {
         try {
             // parsiraj display date: "20.09.2025"
@@ -520,14 +399,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
     }
 
 
-    // Postojeće metode koje čuvaju kompatibilnost sa starijim delovima aplikacije
-
-    /**
-     * Kreira SHA-256 hash od password-a
-     * Koristi se za bezbedno čuvanje password-a u bazi
-     * @param password - plaintext password
-     * @return heksadecimalni string hash-a
-     */
+    
     private String hashPassword(String password) {
         try {
             // Kreira SHA-256 MessageDigest objekat
@@ -543,16 +415,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Dodaje novog korisnika u bazu podataka
-     * @param name - ime korisnika
-     * @param surname - prezime korisnika
-     * @param username - jedinstveno korisničko ime
-     * @param index - broj indeksa
-     * @param password - plaintext password (biće hashovan)
-     * @param role - uloga korisnika ("student" ili "admin")
-     * @return true ako je korisnik uspešno dodat
-     */
+   
     public boolean insertUser(String name, String surname, String username, String index, String password, String role) {
         SQLiteDatabase db = null;
         try {
@@ -586,12 +449,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Autentifikuje korisnika proverom username/password kombinacije
-     * @param username - korisničko ime
-     * @param password - plaintext password
-     * @return String array sa [ime, prezime, uloga] ili null ako autentifikacija ne uspe
-     */
     public String[] authenticateUser(String username, String password) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -629,12 +486,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Proverava da li username već postoji u bazi
-     * Koristi se pre registracije novog korisnika
-     * @param username - korisničko ime za proveru
-     * @return true ako username postoji, false ako ne postoji
-     */
     public boolean isUsernameExists(String username) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -658,11 +509,6 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Čita sve studente iz baze podataka
-     * Filtrira korisnike po role = "student"
-     * @return array Student objekata ili null ako nema studenata
-     */
     public Student[] readStudents() {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -698,10 +544,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Briše studenta iz baze podataka
-     * @param username - korisničko ime studenta za brisanje
-     */
+    
     public void deleteStudent(String username) {
         SQLiteDatabase db = null;
         try {
@@ -718,11 +561,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Helper metoda za kreiranje Student objekta iz Cursor-a
-     * @param cursor - database cursor pozicioniran na red sa student podacima
-     * @return Student objekat kreiran od podataka iz baze
-     */
+   
     private Student createStudentFromCursor(Cursor cursor) {
         // Čita podatke iz trenutnog reda cursor-a
         String name = cursor.getString(cursor.getColumnIndexOrThrow(COL_NAME));
@@ -739,23 +578,13 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         return new Student(imageResId, name, surname, index, false, username);
     }
 
-    /**
-     * Wrapper metoda za kreiranje sesije - koristi novu HTTP metodu
-     * Održava kompatibilnost sa starim kodom
-     * @param date - datum sesije
-     * @param sessionName - naziv sesije
-     * @param description - opis sesije
-     * @return true ako je kreiranje uspešno
-     */
+  
     public boolean insertSession(String date, String sessionName, String description) {
         //koristi novu HTTP metodu
         return createSessionOnServer(date, sessionName, description);
     }
 
-    /**
-     * Čita sve sesije iz lokalne baze podataka
-     * @return array Session objekata ili null ako nema sesija
-     */
+    
     public Session[] readSessions() {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -789,11 +618,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Dobija sve datume za koje postoje sesije
-     * Koristi se u CalendarFragment za proveru dostupnosti
-     * @return ArrayList stringova sa datumima u dd.MM.yyyy formatu
-     */
+    
     public ArrayList<String> getSessionDates() {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -819,11 +644,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Dobija sesiju za određeni datum
-     * @param date - datum sesije u dd.MM.yyyy formatu
-     * @return Session objekat ili null ako sesija ne postoji
-     */
+  
     public Session getSessionByDate(String date) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -852,12 +673,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Helper metoda za kreiranje Session objekta iz Cursor-a
-     * Takođe određuje status sesije (UPCOMING vs PAST) na osnovu vremena završetka
-     * @param cursor - database cursor pozicioniran na red sa session podacima
-     * @return Session objekat sa podacima iz baze
-     */
+ 
     private Session createSessionFromCursor(Cursor cursor) {
         // Čita osnovne podatke iz cursor-a
         String date = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATE));
@@ -891,14 +707,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         return new Session(date, sessionName, status);
     }
 
-    /**
-     * Glavna metoda za dodavanje ili ažuriranje glasa
-     * Pokušava prvo da pošalje glas serveru, zatim ažurira lokalnu bazu
-     * @param sessionName - naziv sesije
-     * @param sessionDate - datum sesije
-     * @param voteType - tip glasa (1=yes, 2=no, 3=abstain)
-     * @return true ako je glasanje uspešno
-     */
+
     public boolean insertOrUpdateVote(String sessionName, String sessionDate, int voteType) {
         // dobija server ID za ovu sesiju
         String serverId = getSessionServerId(sessionName, sessionDate);
@@ -913,18 +722,10 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
 
 
-        // Fallback na lokalno ažuriranje ako server zahtev ne uspe
         return insertOrUpdateVoteLocal(sessionName, sessionDate, voteType);
     }
 
-    /**
-     * Lokalna metoda za ažuriranje glasova (bez server komunikacije)
-     * Koristi se kao fallback kada server nije dostupan
-     * @param sessionName - naziv sesije
-     * @param sessionDate - datum sesije
-     * @param voteType - tip glasa
-     * @return true ako je lokalno ažuriranje uspešno
-     */
+    
     private boolean insertOrUpdateVoteLocal(String sessionName, String sessionDate, int voteType) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -1024,13 +825,7 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Dobija rezultate glasanja za određenu sesiju
-     * Prvo pokušava sinhronizaciju sa servera, zatim čita iz lokalne baze
-     * @param sessionName - naziv sesije
-     * @param sessionDate - datum sesije
-     * @return int array sa [yes, no, abstain] brojevima
-     */
+    
     public int[] getVoteResults(String sessionName, String sessionDate) {
         // prvo pokušava sinhronizaciju sa servera
         String serverId = getSessionServerId(sessionName, sessionDate);
@@ -1042,20 +837,17 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
         Log.d("DB_DEBUG", "getVoteResults START -> sessionName: " + sessionName +
                 ", sessionDate: " + sessionDate);
 
-        // Inicijalizuje rezultate na 0
         int[] results = new int[3]; // [yes, no, abstain]
         SQLiteDatabase db = null;
         Cursor cursor = null;
 
         try {
             db = getReadableDatabase();
-            // Traži glasove za specifičnu sesiju
             cursor = db.query(TABLE_VOTES, null,
                     COL_VOTE_SESSION_NAME + " =? AND " + COL_VOTE_DATE + " =?",
                     new String[]{sessionName, sessionDate}, null, null, null);
 
             if (cursor.moveToFirst()) {
-                // Čita brojke glasova iz baze
                 results[0] = cursor.getInt(cursor.getColumnIndexOrThrow(COL_YES));      // YES glasovi
                 results[1] = cursor.getInt(cursor.getColumnIndexOrThrow(COL_NO));       // NO glasovi
                 results[2] = cursor.getInt(cursor.getColumnIndexOrThrow(COL_ABSTAIN));  // ABSTAIN glasovi
@@ -1064,12 +856,10 @@ public class DecideItDbHelper extends SQLiteOpenHelper {
                         ", NO: " + results[1] + ", ABSTAIN: " + results[2]);
             } else {
                 Log.d("DB_DEBUG", "No votes found for this session/date");
-                // results array ostaje sa default vrednostima [0, 0, 0]
             }
         } catch (Exception e) {
             Log.e("DB_DEBUG", "Error in getVoteResults", e);
         } finally {
-            // Zatvaranje resursa
             if (cursor != null && !cursor.isClosed()) {
                 cursor.close();
                 Log.d("DB_DEBUG", "Cursor closed");
