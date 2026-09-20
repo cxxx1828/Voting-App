@@ -34,7 +34,7 @@ public class DecideActivity extends AppCompatActivity {
     Handler mainHandler;
 
     private static final String TAG = "DECIDE_DEBUG";
-    private boolean isVoting = false; // da izbegnemo duplo glasanje
+    private boolean isVoting = false; 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,19 +56,16 @@ public class DecideActivity extends AppCompatActivity {
         executor = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
 
-        // iz intenta ime i datum
         sessionName = getIntent().getStringExtra("sessionName");
         sessionDate = getIntent().getStringExtra("sessionDate");
 
         Log.d(TAG, "DecideActivity started with sessionName: " + sessionName + ", sessionDate: " + sessionDate);
 
-        // celu sesiju iz db
         if (sessionDate != null) {
             currentSession = dbHelper.getSessionByDate(sessionDate);
             if (currentSession != null) {
                 Log.d(TAG, "Session loaded from DB: " + currentSession.getNaziv() + " Status: " + currentSession.getAtribut());
 
-                // setujem ime i datum sesije
                 t1.setText(currentSession.getNaziv());
                 t2.setText("Session description");
                 t3.setText(currentSession.getDatum());
@@ -93,7 +90,7 @@ public class DecideActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "YES button clicked");
-                if (isVoting) return; // da nema duplog glasanja
+                if (isVoting) return; 
 
                 if (selected == null) {
                     btn1.setBackgroundColor(getColor(R.color.red));
@@ -206,9 +203,6 @@ public class DecideActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * salje glasove na server i updateuje UI
-     */
     private void submitVote(int voteType, String voteLabel) {
         if (isVoting) {
             Log.d(TAG, "Already voting, ignoring request");
@@ -217,7 +211,6 @@ public class DecideActivity extends AppCompatActivity {
 
         isVoting = true;
 
-        // da prikazem promenu stanja
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -238,17 +231,13 @@ public class DecideActivity extends AppCompatActivity {
             public void run() {
                 Log.d(TAG, "Background thread: submitting vote to server");
 
-                //submitujem glas ali sad http serveru
                 boolean success = dbHelper.insertOrUpdateVote(sessionName, sessionDate, voteType);
 
-                // updateujem UI na main niti
-                mainHandler.post(new Runnable() {  // NAZAD NA MAIN THREAD
-                    // MAIN THREAD - UI reset
+                mainHandler.post(new Runnable() {  
                     @Override
                     public void run() {
                         isVoting = false;
 
-                        // resetujem duggmad
                         btn1.setEnabled(true);
                         btn2.setEnabled(true);
                         btn3.setEnabled(true);
@@ -261,20 +250,17 @@ public class DecideActivity extends AppCompatActivity {
                             Log.d(TAG, voteLabel + " vote submitted successfully");
                             Toast.makeText(DecideActivity.this, voteLabel + " vote submitted successfully!", Toast.LENGTH_SHORT).show();
 
-                            // resetujem selekciju
                             selected = null;
                             btn1.setBackgroundColor(getColor(R.color.blue));
                             btn2.setBackgroundColor(getColor(R.color.blue));
                             btn3.setBackgroundColor(getColor(R.color.blue));
 
-                            //zatvorim nakon glasanja
                             finish();
 
                         } else {
                             Log.e(TAG, "Failed to submit " + voteLabel + " vote");
                             Toast.makeText(DecideActivity.this, "Failed to submit vote. Check network connection.", Toast.LENGTH_LONG).show();
 
-                            // resetujem dugmad ali zadrzim izabrano
                             if (selected == btn1) {
                                 btn1.setBackgroundColor(getColor(R.color.red));
                                 btn2.setBackgroundColor(getColor(R.color.blue));
