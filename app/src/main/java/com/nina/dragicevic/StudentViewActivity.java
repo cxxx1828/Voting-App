@@ -55,7 +55,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         String fullName = name + " " + surname;
 
 
-        //--------------DOZVOLA ZA NOTIFIKACIJU
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -64,7 +63,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
             }
         }
 
-        // Proverava da li treba direktno pokazati kalendar (iz notifikacije)
         boolean showCalendar = getIntent().getBooleanExtra("showCalendar", false);
         String sessionDate = getIntent().getStringExtra("sessionDate");
         String sessionName = getIntent().getStringExtra("sessionName");
@@ -117,7 +115,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         logo = findViewById(R.id.Logo2);
         logo.setImageResource(R.drawable.logo);
 
-        // Pokreće servis za praćenje sesija
         startSessionNotificationService();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -130,13 +127,11 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Otkačinje se od servisa ali NE zaustavlja servis
         if (isServiceBound) {
             unbindService(this);
             isServiceBound = false;
             Log.d(TAG, "Service unbound in onDestroy - but service continues running as foreground service");
         }
-        // NE pozivam stopService() jer želimo da servis nastavi da radi
     }
 
     @Override
@@ -145,21 +140,16 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         Log.d(TAG, "Activity stopped, foreground service continues running");
     }
 
-    //Pokreće servis kao foreground service + bind za komunikaciju
 
 
-    //------------------------------------------kreiram
     private void startSessionNotificationService() {
         Log.d(TAG, "Starting session notification service");
 
         Intent serviceIntent = new Intent(StudentViewActivity.this, MyService.class);
 
-        // KLJUČNO: PRVO pozivamo startService da pokrene foreground service
-        // Ovo osigurava da servis ostane živ kada se aktivnost zatvori
         startService(serviceIntent);
         Log.d(TAG, "Service started with startService() - this will call onStartCommand()");
 
-        // ZATIM se povezujemo sa bindService za komunikaciju
         boolean bindResult = bindService(serviceIntent, this, Context.BIND_AUTO_CREATE);
 
         if (bindResult) {
@@ -170,7 +160,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         }
     }
 
-    //aktivnost uspešno povezana sa servisom
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -186,7 +175,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         }
     }
 
-    //Poziva se kada se veza sa servisom prekine
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
@@ -195,7 +183,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         isServiceBound = false;
     }
 
-    //za dobijanje trenutnog statusa servisa
 
     public boolean isNotificationServiceRunning() {
         if (serviceBinder != null) {
@@ -204,7 +191,6 @@ public class StudentViewActivity extends AppCompatActivity implements ServiceCon
         return false;
     }
 
-    //za dobijanje broja proverenih sesija
 
     public int getCheckedSessionsCount() {
         if (serviceBinder != null) {
